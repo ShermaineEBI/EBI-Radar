@@ -25,7 +25,7 @@ CDN links let previously skipped videos transcribe); status / transcript /
 ai_breakdown are never in the payload, so worked rows are never clobbered.
 engagement_rate and viral_score are generated columns — never written.
 
-Env (required): TRACKER ("IG" or "AI"), APIFY_TOKEN, SUPABASE_URL,
+Env (required): TRACKER ("IG", "FB" or "AI"), APIFY_TOKEN, SUPABASE_URL,
                 SUPABASE_SERVICE_ROLE_KEY
 Env (tuning, all optional -- set as GitHub Actions *Variables*):
      MIN_ER (0.02)  MIN_COMMENTS (15)  MIN_ENGAGE (20)  OUTLIER_X (1.5)
@@ -35,6 +35,7 @@ Env (tuning, all optional -- set as GitHub Actions *Variables*):
 
 import json
 import os
+import re
 import statistics
 import sys
 import time
@@ -116,11 +117,35 @@ def sb(path, method="GET", data=None, prefer=None):
 # ---------------------------------------------------------------------------
 
 
+def fb_handle(n):
+    """'https://www.facebook.com/QashierMY/' / '@QashierMY' -> 'qashiermy';
+    'facebook.com/profile.php?id=123' -> '123'."""
+    n = (n or "").strip()
+    if "facebook.com" in n or "fb.com" in n:
+        u = urllib.parse.urlparse(n if "://" in n else "https://" + n)
+        parts = [p for p in u.path.split("/") if p]
+        if parts and parts[0] == "profile.php":
+            return (urllib.parse.parse_qs(u.query).get("id") or [""])[0]
+        if parts and parts[0] in ("pg", "people"):
+            parts = parts[1:]
+        n = parts[0] if parts else ""
+    return n.lstrip("@").strip().lower()
+
+
+def fb_page_url(handle):
+    return f"https://www.facebook.com/{handle}"
+
+
 def fetch_competitors():
     rows = sb(f"competitors?select=username&tracker=eq.{TRACKER}&active=is.true")
     names = []
     for r in rows:
         n = (r.get("username") or "").strip()
+        if TRACKER == "FB":
+            n = fb_handle(n)
+            if n:
+                names.append(n)
+            continue
         if "instagram.com" in n:
             parts = [p for p in urllib.parse.urlparse(n).path.split("/") if p]
             if not parts or parts[0] in ("p", "reel", "reels", "stories", "tv"):
@@ -218,40 +243,86 @@ def post_type(p):
                  "Video" if p.get("isVideo") else "Image")
 
 
-def to_rows(posts, followers_map, today):
+def ig_extract(p):
+    """Apify instagram-post-scraper item -> common post fields (None = broken)."""
+    if p.get("error") or not p.get("shortCode"):
+        return None
+    pt = post_type(p)
+    tags = p.get("hashtags") or []
+    return {
+        "competitor": (p.get("ownerUsername") or (p.get("owner") or {}).get("username")
+                       or "").lower().strip(),
+        "post_id": p["shortCode"],
+        "caption": p.get("caption") or "",
+        "post_type": pt,
+        "likes": int(p.get("likesCount") or p.get("likes") or 0),
+        "comments": int(p.get("commentsCount") or p.get("comments") or 0),
+        "post_date": parse_date(p.get("timestamp")),
+        "post_url": f"https://www.instagram.com/p/{p['shortCode']}/",
+        "thumbnail_url": p.get("displayUrl") or p.get("imageUrl") or None,
+        "video_url": p.get("videoUrl") or None,
+        "hashtags": ", ".join(tags) if isinstance(tags, list) else str(tags),
+        "is_video": bool(p.get("isVideo") or pt in ("Video", "Reel")),
+    }
+
+
+def fb_extract(p):
+    """Apify facebook-posts-scraper item -> common post fields (None = broken).
+
+    FB has no direct video file link in the scrape, so for videos video_url is
+    the post page itself; transcribe_videos.py fetches the audio with yt-dlp.
+    """
+    pid = str(p.get("postId") or p.get("id") or "").strip()
+    if p.get("error") or not pid:
+        return None
+    url = p.get("url") or p.get("topLevelUrl") or f"https://www.facebook.com/{pid}"
+    media = [m for m in (p.get("media") or []) if isinstance(m, dict)]
+    m0 = media[0] if media else {}
+    is_video = (bool(p.get("isVideo")) or (m0.get("__typename") or "").lower() == "video"
+                or any(s in url for s in ("/videos/", "/reel/", "/watch")))
+    thumb = (m0.get("thumbnail") or (m0.get("photo_image") or {}).get("uri")
+             or (m0.get("image") or {}).get("uri") or None)
+    text = p.get("text") or p.get("message") or ""
+    return {
+        # match on the page URL WE asked for, so it lines up with the competitors table
+        "competitor": fb_handle(p.get("inputUrl") or p.get("facebookUrl")
+                                or p.get("pageUrl") or ""),
+        "post_id": "fb_" + pid,
+        "caption": text,
+        "post_type": "Video" if is_video else
+                     ("Carousel" if len(media) > 1 else ("Image" if media else "Text")),
+        "likes": int(p.get("likes") or p.get("reactionsCount") or 0),
+        "comments": int(p.get("comments") or p.get("commentsCount") or 0),
+        "post_date": parse_date(p.get("timestamp") or p.get("time")),
+        "post_url": url,
+        "thumbnail_url": thumb,
+        "video_url": url if is_video else None,
+        "hashtags": ", ".join(re.findall(r"#(\w+)", text)),
+        "is_video": is_video,
+    }
+
+
+def to_rows(posts, followers_map, today, extract=ig_extract):
     """Group the scrape by account, judge each account against ITSELF, and
     guarantee every account contributes its best few posts."""
     by_comp, nofol, broken = {}, 0, 0
     for p in posts:
-        if p.get("error") or not p.get("shortCode"):
+        x = extract(p)
+        if not x:
             broken += 1
             continue
-        u = (p.get("ownerUsername") or (p.get("owner") or {}).get("username") or "")
-        u = u.lower().strip()
+        u = x["competitor"]
         fol = followers_map.get(u, 0)
         if not fol:
             nofol += 1
             continue
-        likes = int(p.get("likesCount") or p.get("likes") or 0)
-        comments = int(p.get("commentsCount") or p.get("comments") or 0)
-        pt = post_type(p)
-        tags = p.get("hashtags") or []
+        likes, comments = x["likes"], x["comments"]
         by_comp.setdefault(u, []).append({
             "row": {
-                "post_id": p["shortCode"],
+                **x,
+                "caption": x["caption"][:5000],
                 "tracker": TRACKER,
-                "competitor": u,
-                "caption": (p.get("caption") or "")[:5000],
-                "post_type": pt,
-                "likes": likes,
-                "comments": comments,
                 "followers": fol,
-                "post_date": parse_date(p.get("timestamp")),
-                "post_url": f"https://www.instagram.com/p/{p['shortCode']}/",
-                "thumbnail_url": p.get("displayUrl") or p.get("imageUrl") or None,
-                "video_url": p.get("videoUrl") or None,
-                "hashtags": ", ".join(tags) if isinstance(tags, list) else str(tags),
-                "is_video": bool(p.get("isVideo") or pt in ("Video", "Reel")),
                 "last_synced": today,
             },
             "eng": likes + comments,
@@ -335,26 +406,11 @@ def cleanup():
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Scrape (one function per platform; both return followers, posts, extractor)
 # ---------------------------------------------------------------------------
 
 
-def main():
-    token = (os.environ.get("APIFY_TOKEN") or "").strip()
-    if not token or not SUPABASE_URL or not os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
-        print("ERROR: APIFY_TOKEN / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY required")
-        sys.exit(1)
-
-    names = fetch_competitors()
-    if not names:
-        print(f"No active {TRACKER} competitors in Supabase — nothing to do.")
-        return
-    print(f"[{TRACKER}] {len(names)} competitors: {', '.join(names[:8])}"
-          + (" ..." if len(names) > 8 else ""))
-    print(f"  filter: ER>={MIN_ER:.1%} OR comments>={MIN_COMMENTS} OR "
-          f"engagements>={OUTLIER_X}x own median | floor {MIN_ENGAGE} | "
-          f"keep {TOP_N_PER_COMP}-{MAX_PER_COMP} per account")
-
+def scrape_ig(token, names):
     profiles = run_actor(token, "apify~instagram-profile-scraper",
                          {"usernames": names}, "Step 1 profiles")
     followers = {}
@@ -375,9 +431,68 @@ def main():
                        "onlyPostsNewerThan": f"{DAYS_BACK} days"}, "Step 2 posts")
     print(f"  scraped {len(posts)} posts (last {DAYS_BACK} days, "
           f"<= {RESULTS_LIMIT}/account)")
+    return followers, posts, ig_extract
+
+
+def scrape_fb(token, names):
+    start_urls = [{"url": fb_page_url(n)} for n in names]
+    pages = run_actor(token, "apify~facebook-pages-scraper",
+                      {"startUrls": start_urls}, "Step 1 FB pages")
+    followers = {}
+    for pg in pages:
+        # page likes as fallback: some pages hide the follower count
+        c = pg.get("followers") or pg.get("followersCount") or pg.get("likes") or 0
+        for key in (pg.get("inputUrl"), pg.get("facebookUrl"), pg.get("pageUrl")):
+            h = fb_handle(key or "")
+            if h and c:
+                followers.setdefault(h, int(c))
+    print(f"  followers for {len([n for n in names if n in followers])}/{len(names)}")
+    if pages and not followers:
+        print(f"  DEBUG page fields: {sorted(pages[0])[:40]}")
+    for n in names:
+        if n not in followers:
+            print(f"  WARNING: no follower count for facebook.com/{n} — its posts are "
+                  "skipped. Check the page name in the competitors table.")
+
+    posts = run_actor(token, "apify~facebook-posts-scraper",
+                      {"startUrls": start_urls, "resultsLimit": RESULTS_LIMIT,
+                       "onlyPostsNewerThan": f"{DAYS_BACK} days"}, "Step 2 FB posts")
+    print(f"  scraped {len(posts)} posts (last {DAYS_BACK} days, "
+          f"<= {RESULTS_LIMIT}/page)")
+    matched = {(fb_extract(p) or {}).get("competitor") for p in posts} & set(names)
+    if posts and not matched:
+        print(f"  DEBUG post fields: {sorted(posts[0])[:40]}")
+    return followers, posts, fb_extract
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def main():
+    token = (os.environ.get("APIFY_TOKEN") or "").strip()
+    if not token or not SUPABASE_URL or not os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
+        print("ERROR: APIFY_TOKEN / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY required")
+        sys.exit(1)
+
+    names = fetch_competitors()
+    if not names:
+        print(f"No active {TRACKER} competitors in Supabase — nothing to do.")
+        return
+    print(f"[{TRACKER}] {len(names)} competitors: {', '.join(names[:8])}"
+          + (" ..." if len(names) > 8 else ""))
+    print(f"  filter: ER>={MIN_ER:.1%} OR comments>={MIN_COMMENTS} OR "
+          f"engagements>={OUTLIER_X}x own median | floor {MIN_ENGAGE} | "
+          f"keep {TOP_N_PER_COMP}-{MAX_PER_COMP} per account")
+
+    if TRACKER == "FB":
+        followers, posts, extract = scrape_fb(token, names)
+    else:
+        followers, posts, extract = scrape_ig(token, names)
 
     today = datetime.now(timezone.utc).date().isoformat()
-    rows = to_rows(posts, followers, today)
+    rows = to_rows(posts, followers, today, extract)
     if rows:
         for i in range(0, len(rows), 100):
             sb("posts?on_conflict=post_id", method="POST", data=rows[i:i+100],

@@ -63,7 +63,25 @@ def save_transcript(post_id, text):
        data={"transcript": text[:MAX_CHARS]}, prefer="return=minimal")
 
 
+def is_page_link(url):
+    """FB posts store the post page, not a video file -> needs yt-dlp."""
+    host = (urllib.parse.urlparse(url).hostname or "").lower()
+    return host.endswith("facebook.com") or host.endswith("fb.watch")
+
+
+def download_page_video(url, path):
+    import yt_dlp
+    opts = {"outtmpl": path, "format": "bestaudio/best", "overwrites": True,
+            "quiet": True, "no_warnings": True, "noprogress": True, "noplaylist": True}
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([url])
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        raise RuntimeError("yt-dlp produced no file")
+
+
 def download(url, path):
+    if is_page_link(url):
+        return download_page_video(url, path)
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=120) as resp, open(path, "wb") as f:
         while True:

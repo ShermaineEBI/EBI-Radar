@@ -27,7 +27,7 @@ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")  # public key, baked
 # Falls back to sensible defaults so the page still builds before they're set.
 BRAND = os.environ.get("BRAND") or "爆款雷达"
 SYNC_DAY = os.environ.get("SYNC_DAY") or "每周"
-TRACKER_LABEL = {"IG": BRAND + " 竞对"}
+TRACKER_LABEL = {"IG": BRAND + " 竞对", "FB": BRAND + " FB竞对"}
 STATUSES = ["未处理", "拍摄中", "已处理", "跳过"]
 
 # comment-bait CTA patterns — require an explicit gated keyword:
@@ -67,7 +67,15 @@ def _handle(name):
     """Normalise a competitor handle the way sync_content.py does, so the two
     scripts always agree on what '@Nike' and 'instagram.com/nike/' mean."""
     n = (name or "").strip()
-    if "instagram.com" in n:
+    if "facebook.com" in n or "fb.com" in n:
+        u = urllib.parse.urlparse(n if "://" in n else "https://" + n)
+        parts = [p for p in u.path.split("/") if p]
+        if parts and parts[0] == "profile.php":
+            return (urllib.parse.parse_qs(u.query).get("id") or [""])[0]
+        if parts and parts[0] in ("pg", "people"):
+            parts = parts[1:]
+        n = parts[0] if parts else ""
+    elif "instagram.com" in n:
         parts = [p for p in urllib.parse.urlparse(n).path.split("/") if p]
         if not parts or parts[0] in ("p", "reel", "reels", "stories", "tv"):
             return ""
@@ -110,6 +118,7 @@ def normalize(r):
     return {
         "id": post_id,
         "tracker": TRACKER_LABEL.get(r.get("tracker"), r.get("tracker") or "AI Competitors"),
+        "src": "FB" if r.get("tracker") == "FB" else "IG",
         "competitor": r.get("competitor") or "",
         "caption": caption,
         "transcript": tr if tr not in ("(转录失败)", "(视频不可用)", "(无口播内容)") else "",
@@ -409,6 +418,10 @@ const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(
 const getKey = () => ANON;  // anon key is baked in — safe, can only change status
 const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const prof = d => d.src === 'FB' ? 'https://www.facebook.com/' + d.competitor : 'https://www.instagram.com/' + d.competitor + '/';
+const embedSrc = d => d.src === 'FB'
+  ? 'https://www.facebook.com/plugins/' + (d.video ? 'video' : 'post') + '.php?show_text=true&width=500&href=' + encodeURIComponent(d.url)
+  : 'https://www.instagram.com/p/' + d.id + '/embed/';
 const byRec = {}; DATA.forEach(d => byRec[d.id] = d);
 const TRENDS = __TRENDS__;
 DATA.forEach(d => {
@@ -485,7 +498,8 @@ const io = new IntersectionObserver(entries => {
       const el = e.target, pid = el.dataset.pid;
       if (!el.querySelector('iframe')) {
         const f = document.createElement('iframe');
-        f.src = 'https://www.instagram.com/p/' + pid + '/embed/';
+        const d = DATA.find(x => x.id === pid);
+        f.src = d ? embedSrc(d) : 'https://www.instagram.com/p/' + pid + '/embed/';
         f.loading = 'lazy'; f.allow = 'autoplay; encrypted-media';
         el.appendChild(f);
       }
@@ -538,7 +552,7 @@ function card(d, idx) {
     <div class="meta">
       <div class="row1">
         <span class="handle" title="拖到上方 tab 即可归类">${I('grip')}</span>
-        <a class="who" href="https://www.instagram.com/${d.competitor}/" target="_blank">@${d.competitor}</a>
+        <a class="who" href="${prof(d)}" target="_blank">@${d.competitor}</a>${d.src === 'FB' ? '<span class="badge">FB</span>' : ''}
         <span class="badge">${d.type || '-'}</span>
         ${days !== null && days <= 7 ? '<span class="badge bnew">' + I('star') + '新帖</span>' : ''}
         ${horse ? '<span class="badge bhorse">' + I('zap') + '黑马</span>' : ''}
@@ -944,6 +958,7 @@ document.getElementById('updated').textContent = '数据更新于 __UPDATED__';
 const $ = id => document.getElementById(id);
 const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const prof = d => d.src === 'FB' ? 'https://www.facebook.com/' + d.competitor : 'https://www.instagram.com/' + d.competitor + '/';
 const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
 const getKey = () => ANON;  // anon key is baked in — safe, can only change status
 const firstLine = c => ((c || '').split('\\n').map(l => l.trim()).filter(Boolean)[0] || '(无文案)');
@@ -1054,7 +1069,7 @@ function renderWork() {
   if (!shoot.length) sl.innerHTML = '<div class="none">队列是空的 — Marketer 去爆款雷达挑几条拖进「拍摄中」</div>';
   shoot.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
-    r.innerHTML = '<a class="who2" href="https://www.instagram.com/' + d.competitor + '/" target="_blank">@' + esc(d.competitor) + '</a>'
+    r.innerHTML = '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>'
       + ((d.x || 0) >= 2 ? '<span class="xb">×' + d.x + '</span>' : '')
       + '<span class="hookline">' + esc(firstLine(d.caption)) + '</span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
@@ -1072,7 +1087,7 @@ function renderWork() {
   picks.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
     r.innerHTML = '<span class="xb">×' + d.x + '</span>'
-      + '<a class="who2" href="https://www.instagram.com/' + d.competitor + '/" target="_blank">@' + esc(d.competitor) + '</a>'
+      + '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>'
       + '<span class="hookline">' + esc(firstLine(d.caption))
       + '<small>🔥' + d.score + ' · ER ' + d.er + '% · 💬' + fmt(d.comments) + '</small></span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'

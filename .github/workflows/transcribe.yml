@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get update -qq || true
           sudo apt-get install -y ffmpeg
-          pip -q install openai-whisper
+          pip -q install openai-whisper yt-dlp
       - name: Transcribe
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

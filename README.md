@@ -145,6 +145,17 @@ Supabase 左下角 **Settings → API Keys**,复制三样(先放记事本):
 > 💡 用的是第 4 步那把免费的 `GEMINI_API_KEY`;有 Claude key 的加 `ANTHROPIC_API_KEY` 会优先用 Claude,稿子更像人话。
 > 💡 `NICHE` 变量决定 AI 拆解的方向,`brand_voice.md` 决定「我的稿」的语气,两个都设了效果最好。
 
+## 📘 同时追踪 Facebook 专页
+
+IG 之外也可以抓竞对的 **Facebook 专页**,同一个看板、同一套转录 / 拆解 / 我的稿。
+
+1. Supabase → SQL Editor,跑 `加竞对.sql` 里的 Facebook 那一段,`tracker` 写 `'FB'`
+2. 账号名填专页网址 `facebook.com/` 后面那一段(例:`QashierMY`),不是专页显示名称
+3. 等周一自动跑,或到 Actions → Sync Content → Run workflow
+
+看板上 FB 的帖子会带「FB」标签,「来源」下拉选「FB竞对」就只看 FB。FB 那一步出错不会影响 IG。
+FB 也走 Apify 计费(facebook-pages-scraper + facebook-posts-scraper),第一次跑完到 Apify → Billing 看一下用量。
+
 ## 卡住了
 
 | 现象 | 怎么办 |

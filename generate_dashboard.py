@@ -27,7 +27,7 @@ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")  # public key, baked
 # Falls back to sensible defaults so the page still builds before they're set.
 BRAND = os.environ.get("BRAND") or "爆款雷达"
 SYNC_DAY = os.environ.get("SYNC_DAY") or "每周"
-TRACKER_LABEL = {"IG": BRAND + " 竞对", "FB": BRAND + " FB竞对"}
+TRACKER_LABEL = {"IG": "Instagram", "FB": "Facebook"}
 STATUSES = ["未处理", "拍摄中", "已处理", "跳过"]
 
 # comment-bait CTA patterns — require an explicit gated keyword:
@@ -278,6 +278,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .badge.bnew { color: var(--pink); border-color: rgba(255,107,157,.45); background: rgba(255,107,157,.07); }
   .badge.bhorse { color: var(--orange); border-color: rgba(240,163,63,.45); background: rgba(240,163,63,.07); }
   .badge.bbait { color: var(--accent); border-color: rgba(94,161,255,.4); background: rgba(94,161,255,.07); }
+  .badge.pig { color: #fff; border-color: transparent; background: linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af); font-weight: 600; }
+  .badge.pfb { color: #fff; border-color: transparent; background: #1877f2; font-weight: 600; }
+  .chip2.plat { font-weight: 600; }
+  .chip2.plat .n { opacity: .7; font-weight: 500; }
+  .chip2.plat.ig.on { color: #fff; border-color: transparent; background: linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af); }
+  .chip2.plat.fb.on { color: #fff; border-color: transparent; background: #1877f2; }
+  .chip2.plat.all.on { color: var(--text); border-color: var(--border-hi); background: var(--card); }
   .date { margin-left: auto; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
 
   .nums { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -376,7 +383,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
     <div class="search"><svg class="ic"><use href="#i-search"/></svg>
       <input id="fSearch" placeholder="搜文案 / hashtag / 账号"></div>
-    <select id="fTracker"><option value="">全部 Tracker</option></select>
     <select id="fComp"><option value="">全部 Competitor</option></select>
     <select id="fSort">
       <option value="x">按 爆款倍数 (vs 自家平均)</option>
@@ -390,6 +396,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <a class="btn" href="team.html" target="_top" title="工作台"><svg class="ic"><use href="#i-users"/></svg>工作台</a>
   </div>
+  <div class="chips" id="platforms"></div>
   <div class="tabs" id="tabs"></div>
   <div class="chips" id="presets"></div>
   <div class="chips" id="trends"></div>
@@ -399,7 +406,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg>没有符合条件的帖子</div>
   <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">载入更多</button></div>
 </main>
-<footer>数据来源 Supabase · __SYNC_DAY__自动更新 · 状态更改即时同步全团队 · 视频由 Instagram 官方 embed 播放</footer>
+<footer>数据来源 Supabase · __SYNC_DAY__自动更新 · 状态更改即时同步全团队 · 视频由 Instagram / Facebook 官方 embed 播放</footer>
 <div id="toast"></div>
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -412,6 +419,10 @@ const PAGE = 48;
 let shown = PAGE;
 let videoOnly = false;
 let curTab = '全部';
+let curPlat = '';
+try { curPlat = localStorage.getItem('plat') || ''; } catch (e) {}
+const PLATS = [['', '全部平台', 'all'], ['IG', 'Instagram', 'ig'], ['FB', 'Facebook', 'fb']];
+const platBadge = d => d.src === 'FB' ? '<span class="badge pfb">Facebook</span>' : '<span class="badge pig">Instagram</span>';
 
 const $ = id => document.getElementById(id);
 const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
@@ -444,18 +455,45 @@ function toast(msg, ok) {
 
 // filters
 const comps = [...new Set(DATA.map(d => d.competitor))].sort();
-comps.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = '@'+c; $('fComp').appendChild(o); });
-[...new Set(DATA.map(d => d.tracker))].forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; $('fTracker').appendChild(o); });
+function fillComps() {
+  const keep = $('fComp').value;
+  $('fComp').innerHTML = '<option value="">全部 Competitor</option>';
+  [...new Set(DATA.filter(d => !curPlat || d.src === curPlat).map(d => d.src + ':' + d.competitor))].sort((a, b) => a.slice(3).localeCompare(b.slice(3)) || a.localeCompare(b))
+    .forEach(k => { const o = document.createElement('option'); o.value = k;
+      o.textContent = '@' + k.slice(3) + (k.startsWith('FB') ? '  (Facebook)' : '  (Instagram)'); $('fComp').appendChild(o); });
+  $('fComp').value = [...$('fComp').options].some(o => o.value === keep) ? keep : '';
+}
+fillComps();
 
 function matchQ(d) {
   const q = ($('fSearch').value || '').trim().toLowerCase();
   return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor).toLowerCase().includes(q);
 }
 
-function basePool() {
-  const t = $('fTracker').value, c = $('fComp').value;
-  return DATA.filter(d => (!t || d.tracker === t) && (!c || d.competitor === c) && (!videoOnly || d.video)
+function poolNoPlat() {
+  const c = $('fComp').value;
+  return DATA.filter(d => (!c || d.src + ':' + d.competitor === c) && (!videoOnly || d.video)
     && matchQ(d) && PRESETS.every(p => !presetOn[p.k] || p.f(d)));
+}
+
+function basePool() {
+  return poolNoPlat().filter(d => !curPlat || d.src === curPlat);
+}
+
+function renderPlatforms() {
+  const pool = poolNoPlat();
+  $('platforms').innerHTML = '<span class="lbl">平台</span>';
+  PLATS.forEach(([k, label, cls]) => {
+    const n = pool.filter(d => !k || d.src === k).length;
+    const c = document.createElement('span');
+    c.className = 'chip2 plat ' + cls + (curPlat === k ? ' on' : '');
+    c.innerHTML = esc(label) + ' <span class="n">' + n + '</span>';
+    c.onclick = () => {
+      curPlat = k; try { localStorage.setItem('plat', k); } catch (e) {}
+      fillComps(); shown = PAGE; render();
+    };
+    $('platforms').appendChild(c);
+  });
 }
 
 function filtered() {
@@ -552,7 +590,7 @@ function card(d, idx) {
     <div class="meta">
       <div class="row1">
         <span class="handle" title="拖到上方 tab 即可归类">${I('grip')}</span>
-        <a class="who" href="${prof(d)}" target="_blank">@${d.competitor}</a>${d.src === 'FB' ? '<span class="badge">FB</span>' : ''}
+        <a class="who" href="${prof(d)}" target="_blank">@${d.competitor}</a>${platBadge(d)}
         <span class="badge">${d.type || '-'}</span>
         ${days !== null && days <= 7 ? '<span class="badge bnew">' + I('star') + '新帖</span>' : ''}
         ${horse ? '<span class="badge bhorse">' + I('zap') + '黑马</span>' : ''}
@@ -613,6 +651,7 @@ function card(d, idx) {
 }
 
 function render() {
+  renderPlatforms();
   renderTabs();
   const arr = filtered();
   const grid = $('grid'); grid.innerHTML = '';
@@ -655,7 +694,7 @@ async function refreshStatuses() {
   } catch (e) {}
 }
 
-['fTracker','fComp','fSort'].forEach(id => $(id).onchange = () => { shown = PAGE; render(); });
+['fComp','fSort'].forEach(id => $(id).onchange = () => { shown = PAGE; render(); });
 $('fSearch').oninput = () => { shown = PAGE; render(); };
 $('fVideo').onclick = () => { videoOnly = !videoOnly; $('fVideo').classList.toggle('on', videoOnly); shown = PAGE; render(); };
 $('moreBtn').onclick = () => { shown += PAGE; render(); };
@@ -757,6 +796,8 @@ TEAM_TEMPLATE = """<!DOCTYPE html>
     white-space:nowrap; }
   .row .hookline small { color:var(--faint); display:block; font-size:11px; margin-top:1px; }
   .row .who2 { color:var(--accent); text-decoration:none; font-weight:600; font-size:12px; white-space:nowrap; }
+  .pt { font-size:10px; font-weight:600; color:#fff; padding:1px 6px; border-radius:4px; white-space:nowrap; }
+  .pt.ig { background:linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af); } .pt.fb { background:#1877f2; }
   .xb { font-family:var(--disp); font-weight:600; font-size:11px; color:var(--orange);
     border:1px solid rgba(240,163,63,.4); background:rgba(240,163,63,.07); border-radius:99px;
     padding:2px 8px; white-space:nowrap; }
@@ -959,6 +1000,7 @@ const $ = id => document.getElementById(id);
 const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const prof = d => d.src === 'FB' ? 'https://www.facebook.com/' + d.competitor : 'https://www.instagram.com/' + d.competitor + '/';
+const ptag = d => d.src === 'FB' ? '<span class="pt fb">FB</span>' : '<span class="pt ig">IG</span>';
 const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
 const getKey = () => ANON;  // anon key is baked in — safe, can only change status
 const firstLine = c => ((c || '').split('\\n').map(l => l.trim()).filter(Boolean)[0] || '(无文案)');
@@ -1069,7 +1111,7 @@ function renderWork() {
   if (!shoot.length) sl.innerHTML = '<div class="none">队列是空的 — Marketer 去爆款雷达挑几条拖进「拍摄中」</div>';
   shoot.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
-    r.innerHTML = '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>'
+    r.innerHTML = '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>' + ptag(d)
       + ((d.x || 0) >= 2 ? '<span class="xb">×' + d.x + '</span>' : '')
       + '<span class="hookline">' + esc(firstLine(d.caption)) + '</span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
@@ -1087,7 +1129,7 @@ function renderWork() {
   picks.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
     r.innerHTML = '<span class="xb">×' + d.x + '</span>'
-      + '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>'
+      + '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>' + ptag(d)
       + '<span class="hookline">' + esc(firstLine(d.caption))
       + '<small>🔥' + d.score + ' · ER ' + d.er + '% · 💬' + fmt(d.comments) + '</small></span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'

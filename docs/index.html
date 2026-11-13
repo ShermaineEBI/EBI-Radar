@@ -1,25 +1,540 @@
 <!DOCTYPE html>
-<html lang="zh"><head>
+<html lang="zh">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="refresh" content="60">
-<title>爆款雷达 · 还在加载</title>
+<title>Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-       background:#0a0d13;color:#e8e8ea;text-align:center;padding:24px;
-       font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
-  .spin{width:34px;height:34px;margin:0 auto 26px;border:3px solid #2a2f3a;
-        border-top-color:#ff785a;border-radius:50%;animation:s 1s linear infinite}
-  @keyframes s{to{transform:rotate(360deg)}}
-  h1{font-size:23px;margin:0 0 14px;font-weight:600}
-  p{margin:8px 0;color:#9a9aa2;font-size:15px;line-height:1.75}
-  .hint{margin-top:30px;font-size:13.5px;color:#6e6e78}
-  @media(prefers-reduced-motion:reduce){.spin{animation:none}}
-</style></head><body><div>
-  <div class="spin"></div>
-  <h1>你的页面还在加载中,请稍等</h1>
-  <p>第一次大约需要 20-60 分钟。</p>
-  <p>这一页会自己刷新,你可以先去忙别的。</p>
-  <p class="hint">等很久都没变?回到安装 SOP 第 7 步,<br>到仓库的 Actions 看 Sync Content 有没有跑完。</p>
-</div></body></html>
+  :root {
+    --bg: #0a0d13;
+    --card: #11151d;
+    --card-hi: #151a24;
+    --border: #1d2430;
+    --border-hi: #2c3546;
+    --text: #e8ecf3;
+    --muted: #8a94a6;
+    --faint: #5b6577;
+    --accent: #5ea1ff;
+    --green: #3fd68f;
+    --orange: #f0a33f;
+    --pink: #ff6b9d;
+    --red: #ff5c5c;
+    --fire1: #ff8a3d;
+    --fire2: #ff4d6d;
+    --font: 'Inter', -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --disp: 'Space Grotesk', 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scrollbar-color: #232c3b var(--bg); }
+  body { background: var(--bg); color: var(--text); font-family: var(--font);
+    -webkit-font-smoothing: antialiased; }
+  ::selection { background: rgba(94,161,255,.3); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #232c3b; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2c3546; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  .ic { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; fill: none; flex: none; }
+
+  header { position: sticky; top: 0; z-index: 50; background: rgba(10,13,19,.86);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border); padding: 13px 20px 12px; }
+  .hrow { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; max-width: 1440px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .mark { width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--fire1), var(--fire2));
+    box-shadow: 0 4px 16px rgba(255,92,80,.35); }
+  .mark .ic { width: 17px; height: 17px; color: #fff; }
+  h1 { font-family: var(--disp); font-size: 16.5px; font-weight: 700; letter-spacing: .2px; white-space: nowrap; line-height: 1.15; }
+  h1 small { display: block; color: var(--faint); font-family: var(--font); font-weight: 400;
+    font-size: 10.5px; letter-spacing: 0; }
+
+  .search { position: relative; }
+  .search > .ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--faint); width: 13.5px; pointer-events: none; }
+  input#fSearch { background: var(--card); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px 8px 32px; font-size: 13px; font-family: var(--font);
+    width: 200px; transition: border-color .18s, background .18s; }
+  input#fSearch:hover { border-color: var(--border-hi); }
+  input#fSearch:focus { border-color: var(--accent); outline: none; }
+  input#fSearch::placeholder { color: var(--faint); }
+
+  select, .btn { background: var(--card); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 11px; font-size: 13px; font-family: var(--font);
+    cursor: pointer; transition: border-color .18s, background .18s, color .18s;
+    display: inline-flex; align-items: center; gap: 6px; }
+  select:hover, .btn:hover { border-color: var(--border-hi); background: var(--card-hi); }
+  .btn:active { transform: scale(.97); }
+  .btn.on { border-color: var(--accent); color: var(--accent); background: rgba(94,161,255,.08); }
+
+  .tabs { display: flex; gap: 7px; flex-wrap: wrap; max-width: 1440px; margin: 12px auto 0; }
+  .tab { display: inline-flex; align-items: center; gap: 7px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 999px; padding: 6.5px 14px;
+    font-size: 13px; color: var(--muted); cursor: pointer; user-select: none;
+    transition: border-color .18s, background .18s, color .18s, transform .18s; }
+  .tab:hover { border-color: var(--border-hi); color: var(--text); }
+  .tab .cnt { font-family: var(--disp); font-weight: 600; font-size: 11px;
+    background: rgba(255,255,255,.06); padding: 1.5px 7.5px; border-radius: 99px;
+    font-variant-numeric: tabular-nums; }
+  .tab.on { color: var(--text);
+    background: linear-gradient(135deg, rgba(255,138,61,.15), rgba(255,77,109,.15));
+    border-color: rgba(255,120,90,.45); }
+  .tab.on .cnt { background: rgba(255,120,90,.25); }
+  body.dragging .tab.droppable { border-style: dashed; border-color: var(--accent); }
+  .tab.over { background: rgba(94,161,255,.22); color: var(--text); transform: scale(1.07); }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; max-width: 1440px; margin: 9px auto 0; align-items: center; }
+  .chips .lbl { font-size: 12px; color: var(--faint); margin-right: 2px; }
+  .chip2 { display: inline-flex; align-items: center; gap: 5.5px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4.5px 12px;
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+    transition: border-color .18s, color .18s, background .18s;
+    font-variant-numeric: tabular-nums; }
+  .chip2 .ic { width: 12.5px; height: 12.5px; }
+  .chip2:hover { border-color: var(--border-hi); color: var(--text); }
+  .chip2.on { border-color: rgba(240,163,63,.6); color: var(--orange); background: rgba(240,163,63,.08); }
+
+  main { max-width: 1440px; margin: 22px auto; padding: 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 18px; }
+
+  .card { position: relative; background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+    transition: transform .22s cubic-bezier(.2,.7,.3,1), border-color .22s, box-shadow .22s;
+    animation: fadeUp .45s cubic-bezier(.2,.7,.3,1) both; }
+  .card:hover { transform: translateY(-3px); border-color: var(--border-hi);
+    box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+  .card.outlier::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--fire1), var(--fire2)); z-index: 2; }
+  .card[draggable] { cursor: grab; }
+  .card.lifting { opacity: .45; }
+  .card.saved { border-color: var(--green); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .embed { position: relative; width: 100%; aspect-ratio: 4/5; background: #080b10; }
+  .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .embed .ph { position: absolute; inset: 0; display: grid; place-items: center;
+    background: linear-gradient(110deg, #0b0e15 8%, #121826 18%, #0b0e15 33%);
+    background-size: 200% 100%; animation: shimmer 1.5s linear infinite; }
+  .embed .ph .ic { width: 30px; height: 30px; color: #2a3342; stroke-width: 1.6; }
+  @keyframes shimmer { to { background-position-x: -200%; } }
+
+  .meta { padding: 13px 15px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .row1 { display: flex; align-items: center; gap: 7px; font-size: 13px; flex-wrap: wrap; }
+  .handle { color: #3a4456; cursor: grab; display: inline-flex; }
+  .handle .ic { width: 13px; height: 13px; }
+  .who { font-weight: 600; color: var(--accent); text-decoration: none; }
+  .who:hover { text-decoration: underline; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 500;
+    padding: 2.5px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .badge .ic { width: 10.5px; height: 10.5px; }
+  .badge.bnew { color: var(--pink); border-color: rgba(255,107,157,.45); background: rgba(255,107,157,.07); }
+  .badge.bhorse { color: var(--orange); border-color: rgba(240,163,63,.45); background: rgba(240,163,63,.07); }
+  .badge.bbait { color: var(--accent); border-color: rgba(94,161,255,.4); background: rgba(94,161,255,.07); }
+  .date { margin-left: auto; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+  .nums { display: flex; gap: 6px; flex-wrap: wrap; }
+  .num { display: inline-flex; align-items: center; gap: 5px; background: #0c0f16;
+    border: 1px solid var(--border); border-radius: 9px; padding: 5px 9px;
+    font-size: 11px; color: var(--muted); }
+  .num .ic { width: 11.5px; height: 11.5px; }
+  .num b { font-family: var(--disp); color: var(--text); font-size: 12.5px; font-weight: 600;
+    font-variant-numeric: tabular-nums; }
+  .num.hot { border-color: rgba(255,122,77,.35); }
+  .num.hot .ic, .num.hot b { color: #ff7a4d; }
+  .num.x { border-color: rgba(240,163,63,.35); }
+  .num.x .ic, .num.x b { color: var(--orange); }
+  .num.er .ic, .num.er b { color: var(--green); }
+
+  .cap { color: var(--muted); font-size: 12.5px; line-height: 1.55; display: -webkit-box;
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  .cap.open { -webkit-line-clamp: unset; }
+  .cap b { color: var(--text); font-weight: 600; }
+  .ai { border-left: 2px solid var(--orange); background: rgba(240,163,63,.06);
+    padding: 8px 11px; border-radius: 0 10px 10px 0; font-size: 12px; line-height: 1.65;
+    color: var(--muted); }
+  .ai b { color: var(--orange); font-weight: 600; }
+  .mine { border-left: 2px solid var(--green); background: rgba(63,214,143,.06);
+    padding: 8px 11px; border-radius: 0 10px 10px 0; font-size: 12px; line-height: 1.65;
+    color: var(--muted); cursor: pointer; display: -webkit-box; -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+  .mine.open { -webkit-line-clamp: unset; }
+  .mine b { color: var(--green); font-weight: 600; }
+
+  .srow { display: flex; align-items: center; gap: 7px; }
+  .srow label { font-size: 12px; color: var(--faint); }
+  .status { flex: 1; padding: 6px 9px; font-size: 12.5px; }
+  .status.s未处理 { color: var(--muted); }
+  .status.s拍摄中 { color: var(--orange); border-color: rgba(240,163,63,.5); }
+  .status.s已处理 { color: var(--green); border-color: rgba(63,214,143,.5); }
+  .status.s跳过 { color: var(--red); border-color: rgba(255,92,92,.5); }
+  .abtn { display: inline-flex; align-items: center; gap: 5px; background: #0c0f16;
+    color: var(--muted); border: 1px solid var(--border); border-radius: 9px;
+    padding: 6px 10px; font-size: 11.5px; font-family: var(--font); cursor: pointer;
+    text-decoration: none; transition: color .18s, border-color .18s, transform .1s; }
+  .abtn .ic { width: 12px; height: 12px; }
+  .abtn:hover { color: var(--accent); border-color: rgba(94,161,255,.5); }
+  .abtn:active { transform: scale(.95); }
+
+  .more { text-align: center; margin: 28px 0 44px; }
+  .more button { background: var(--card); color: var(--accent); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px 30px; font-size: 14px; font-family: var(--font);
+    cursor: pointer; transition: border-color .18s, background .18s; }
+  .more button:hover { border-color: var(--border-hi); background: var(--card-hi); }
+
+  .empty { color: var(--faint); text-align: center; padding: 70px 0; display: flex;
+    flex-direction: column; align-items: center; gap: 12px; font-size: 14px; }
+  .empty .ic { width: 34px; height: 34px; stroke-width: 1.5; color: #2c3546; }
+
+  footer { color: var(--faint); font-size: 11px; text-align: center; padding: 22px; }
+
+  #toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: var(--card-hi); border: 1px solid var(--border-hi); border-radius: 11px;
+    padding: 11px 20px; font-size: 13px; display: none; z-index: 99; opacity: 0;
+    box-shadow: 0 12px 32px rgba(0,0,0,.5); transition: opacity .2s, transform .2s; }
+  #toast.show { display: block; opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></symbol>
+  <symbol id="i-magnet" viewBox="0 0 24 24"><path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"/><path d="m5 8 4 4"/><path d="m12 15 4 4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4Z"/><rect x="2" y="4" width="20" height="16" rx="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
+  <symbol id="i-pct" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
+</svg>
+<header>
+  <div class="hrow">
+    <div class="brand">
+      <div class="mark"><svg class="ic"><use href="#i-flame"/></svg></div>
+      <h1>Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries<small id="updated"></small></h1>
+    </div>
+    <div class="search"><svg class="ic"><use href="#i-search"/></svg>
+      <input id="fSearch" placeholder="搜文案 / hashtag / 账号"></div>
+    <select id="fTracker"><option value="">全部 Tracker</option></select>
+    <select id="fComp"><option value="">全部 Competitor</option></select>
+    <select id="fSort">
+      <option value="x">按 爆款倍数 (vs 自家平均)</option>
+      <option value="score">按 Viral Score</option>
+      <option value="er">按 Engagement Rate</option>
+      <option value="comments">按 Comments</option>
+      <option value="likes">按 Likes</option>
+      <option value="date">按 最新日期</option>
+    </select>
+    <button class="btn" id="fVideo"><svg class="ic"><use href="#i-video"/></svg>只看视频</button>
+
+    <a class="btn" href="team.html" target="_top" title="工作台"><svg class="ic"><use href="#i-users"/></svg>工作台</a>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="chips" id="presets"></div>
+  <div class="chips" id="trends"></div>
+</header>
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg>没有符合条件的帖子</div>
+  <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">载入更多</button></div>
+</main>
+<footer>数据来源 Supabase · 每周自动更新 · 状态更改即时同步全团队 · 视频由 Instagram 官方 embed 播放</footer>
+<div id="toast"></div>
+<script id="data" type="application/json">[{"id": "Dd6FJ07scbH", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "tunai.salon.app", "caption": "特地从 KL 跑到 JB，就为了拜访这家宠物店！🐶✨\n听说里面还藏着「五星级宠物酒店」！？👀\n\n这次来到 SEN SEN PET STUDIO，认识了一位热爱狗狗、也勇于挑战的老板娘 💛\n\n从筹备开店开始，她就坚持给毛孩一个舒适、宽敞的空间。从装修到设备，每个细节都花了不少心思，只希望毛孩在这里能安心入住、享受照顾，再漂漂亮亮地回家 🛁🐾\n\n而从开店第一天起，她就选择用 TunaiPro，帮忙打理店里的日常运营 ✨\n\n📊 业绩自动统计，经营状况更清楚\n📲 预约有序安排，忙起来也不乱\n📂 毛孩备注与服务记录，一查就知道\n🔔 自动发送预约提醒，省下逐一通知的时间\n\n一个 App，把日常管理安排妥当，让她有更多时间专心照顾毛孩 💛\n\n你也是宠物美容店老板？\n欢迎私信了解 TunaiPro，让每天的管理更轻松 📩\n\n#TunaiPro #SenSenPetStudio #宠物美容 #宠物酒店 #宠物店管理", "transcript": "哇 太瘦了嗨 你好請問你的電視在哪裡我的電視在Jerry Azkira為什麼是兩個狗的LOGO因為兩個其實是我自己的狗那我們一合上跳起來一下一 二 三四 五原來LOGO就是兩個狗可以到我長關一下你的電腦可以啊這裡是我們的Gooming Room哇 這裡很搭一下耶嗯 OK囉這邊有它的桌子就是合大狗的然後小桌我們多數都是在小桌撿麻然後裡面是洗澡間這邊是我們的洗澡的地方然後這裡是桌下這個紅蛋機囉因為有些狗狗他們可能會比較害怕那個水風筒的那個生意所以我們多數都是會用水筒因為真的他們會調卡這邊的話就是我們的Booting Room可以進來看這樣我們這裡是有這個大廠還有一個小廠然後上面都是給貓咪住的我們晚上也是一樣有開冷氣的可是我們沒有開這麼冷晚上的話都是開25度這樣開冷的時候會不喜歡可是也不會太熱了怎樣那是瘦瘦沒有 他們會跳了我們這邊的話也是Booting的地方然後PaygroundPayground給那些狗狗自由活動在這邊因為那邊看來那個是智能廠然後這裡就圍欄的那個區域給那個家長選擇就是要住那個智能廠或者是住在這個Booting這樣它的價格是有差別的它沒有一樣的我們去看那個家長他們要選擇住哪裡變得的話就是大狗的區域那你們寵物店是用什麼系統來管理我們現在是用那個Gunite 4然後你最喜歡的功能是什麼可以記上囉還有可以記Paypal的那個性格第三個可以記Paypal好棒那你覺得這個系統是適合Pastelun的嗎不適合啊這個是挺容易操作的謝謝你今天帶我參觀你的店你今天有多少個有關的呢今天有8個8個 像我在給你半秒的時間打廣告啊1 2 3 GO哈囉 我是Jesse先生Pastel的老闆娘我的店是在JV Astila這裡如果有要寵物美容或者是寵物Booting的話都可以來找我掰掰", "brk": "Hook类型: 身份共鸣\n结构: 探店打卡 → 店铺亮点展示 → 系统痛点切入 → 老板现身说法\n为什么火: 用探店纪实形式自然植入软件，老板真实反馈增强了说服力\n改编角度: 探访美业或零售标杆店，通过老板口述用POS和预约系统解决的真实痛点来引流", "my": "还在用传统方式来经营您的生意吗？\n\n很多老板以为，管理多家分店一定要请很多行政人员，每天花几个小时手动对账，才能把客人的资料和预约记录整理好。\n\n其实真正拖慢生意成长的原因，是您还在用手写记录或Excel处理日常运作。\n\n升级至SQL EBI POS系统，用更聪明的方式经营您的生意。\n\n第一，多分行资料共用。会员在A分店买的配套或储值，可以在B分店使用，分店之间查得到彼此的消费记录，开新分店不用重新建资料。\n\n第二，完整报表管理。每间分店可以分开看，也可以合起来看，还能按分行比较，实时追踪最受欢迎的项目和员工佣金。\n\n第三，会员与电子发票整合。所有客户资料一目了然，还能直接处理电子发票，让日常运营更简单。\n\n美业系统从每个License RM149起，实际价钱根据您的行业、所需功能及使用人数而定。\n\n以前每天花很多时间整理账目、找会员记录，忙起来容易出错；\n现在有了合适的系统，所有数据一目了然，简单又实用。\n\nWhatsApp我们了解更多，预约免费Demo。", "tags": "TunaiPro, SenSenPetStudio, 宠物美容, 宠物酒店, 宠物店管理", "bait": false, "type": "Video", "likes": 20, "comments": 0, "er": 1.35, "followers": 1478, "date": "2026-09-30", "url": "https://www.instagram.com/p/Dd6FJ07scbH/", "video": true, "ratio": 0, "score": 1.35, "status": "未处理", "x": 5.0}, {"id": "Dey7vr7msLh", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "aoikumo.cloud", "caption": "We’re pleased to have Dr. Goh Ming Chun from Beleco Clinic share his experience with Aoikumo™! 🎉\n\nHe shared how Aoikumo™ has helped Beleco Clinic manage its daily operations more efficiently, bringing greater organisation and connectivity to its clinic workflows. Alongside these improvements, they can access and trace patient data more easily across different locations with Aoikumo™ compared to manual processes. This makes it easier for the team to stay connected and organised at all their outlets.\n\nWatch the full testimonial to hear directly from Dr. Goh Ming Chun and discover how Aoikumo™ supports Beleco Clinic in its clinic business journey! 📹\n\n📲https://wa.me/60176847223\n📤m.me/aoikumocloud\n🌍aoikumo.com/contact-us/\n📧info@aoikumo.com\n\n🌐Proudly powered by Kumo™\n\n#Digitalise #Paperless #Cloudbased #Easy #Secure #AestheticClinic #BeautySalon #Spa #BestPosSystem #BeautyBusiness #AoikumoPosSoftware #AoikumoCares #Beauty #Aesthetics #Aesthetic #POSsystem #DigitalSolution #OneStopSolution #A", "transcript": "Hi everyone, my name is Dr. Goh. I am the founder of Bileco Clinic. Currently we have three branches across Kuala Lumpur and Selangor. So mainly we are in Puchong, Petaling Jaya and also Sweepetaling. So before I'm using iKUMO, I only run just one branch at that time. So everything, the documentation, patient record is all in manual. So when I have more and more patient and when I expand to second and third branch, so I think patient record across the branch is very important. So this is when iKUMO become very useful. It helps me manage my patient record properly. So I can trace my patient data across all the three branches whenever no matter where I am at and then patient treatments can be recorded much easier compared to manual recording. So in iKUMO, they also have this unlimited data storage where you can store all the patient treatment consent, procedure consent or in patient profile. So you don't have to worry that you will lose the consent form or any data for your patient. Yes definitely I will recommend iKUMO to other doctors especially if you are looking for a system then can manage your patient your data properly. In iKUMO, you have the AI system, you have a system where you can upload photo, you can trace their spending, you can trace their records. I think it's a one platform that is very covered everything that you need in your daily practices.", "brk": "Hook类型: 身份共鸣\n结构: 诊所痛点 → 跨店扩张 → 系统赋能\n为什么火: 真实医美创始人背书，精准击中多店连锁管理痛点\n改编角度: 邀请美业连锁老板出镜，讲述多店患者数据打通与防漏单的真实蜕变", "my": "还在用手写记录来管理多家分店的客户资料吗？🧐\n\n很多老板以为，开分店只要多请几个员工就行。\n\n其实真正拖慢生意生长的，是各家分店的数据根本无法同步。\n\n是时候用更聪明的方式经营了。\n\n来看看如何让多分店管理变得简单：\n\n第一，所有分行的会员资料和消费记录必须完全共用。\n\n这样当客户去不同的分店时，前台能立刻查到之前的记录。\n\n不用重新建档，省下大量手动输入的时间。\n\n第二，库存和销售数据要做到实时更新。\n\n老板不用亲自跑去每一家店，也能随时查看各分间的业绩表现。\n\n所有数据一目了然，简单又实用。\n\n第三，自动计算员工佣金和每日报表。\n\n系统会根据设定好的规则自动处理，减少人工算错的风险。\n\n小小的改变，也能带来巨大的提升。\n\n以前有位经营多家分店的美业老板，所有资料都是靠手写和 Excel 记录。\n\n当开到第二和第三家店时，跨分行的客户资料完全对不上。\n\n自从升级至 SQL EBI POS 系统后，跨分行的数据管理变得非常顺畅。\n\n不管身在何处，都能实时查看各分店的经营状况。\n\n别再靠感觉经营，用数据说话。\n\n每个 License 从 RM149 起，实际价钱在免费 Demo 后正式报价。\n\nWhatsApp 我们了解更多。\n\nhttps://wa.me/message/UB23IU2KKWRVK1", "tags": "Digitalise, Paperless, Cloudbased, Easy, Secure, AestheticClinic, BeautySalon, Spa, BestPosSystem, BeautyBusiness, AoikumoPosSoftware, AoikumoCares, Beauty, Aesthetics, Aesthetic, POSsystem, DigitalSolution, OneStopSolution, Aoikumo, einvoicing, einvoice, AestheticClinicManagementSystem, AppointmentAutomation, HealthcareAI, BelecoClinic", "bait": false, "type": "Video", "likes": 3, "comments": 0, "er": 1.0, "followers": 300, "date": "2026-10-22", "url": "https://www.instagram.com/p/Dey7vr7msLh/", "video": true, "ratio": 0, "score": 1.0, "status": "未处理", "x": 0}, {"id": "Dd3tbbOCMGt", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "aoikumo.cloud", "caption": "Unlock stronger business growth by transforming complex data into valuable AI-powered insights for your medical aesthetic clinic or beauty business. 🤖\n\n​📊 Summarise and Analyse Your Business Performance Instantly​\nTransform complex data into clear visual insights, performance summaries, and key metrics with AI-assisted performance analysis. Instantly uncover what drives your business without spending hours analysing multiple reports.\n\n​🔍 Pinpoint Hidden Growth Opportunities Through Intelligent Visual Insights​\nUncover hidden growth opportunities through AI-powered visual insights that reveal emerging business trends, changing customer behaviour, and profit opportunities. Compare data effortlessly across outlets and discover where your next growth opportunities lie.\n\n💡 Plan Smarter Business Strategies with AI-Driven Recommendations\nLet Aoikumo™ become your intelligent business advisor by interpreting your business data, identifying the key factors influencing your business performance, ", "transcript": "", "brk": "Hook类型: 痛点直击\n结构: 痛点揭示 → AI功能展示 → 终极价值落脚\n为什么火: 精准切中美业老板看不懂复杂报表、缺时间做数据分析的痛点。\n改编角度: 结合美业POS与预约系统，演示AI如何一秒找出店里最赚钱的项目和卡项。", "my": "还在用传统方式来经营您的生意吗？\n预约混乱、没有系统化客户资料、销售手动记录、缺乏员工表现数据、没有清晰报表…\n这些看似小问题，其实正在一点一点拖慢你的生意成长。\n很多老板以为，要管好几家分店一定要花很多时间整理账目。\n其实不是，真正拖累你的，是没有把数据用对地方。\n是时候用更聪明的方式经营。\n第一个方法，追踪员工表现。\n你可以用SQL EBI POS系统自动计算员工佣金。\n不用再拿计算器按半天，系统会实时记录每个人的业绩。\n这样发薪水时一目了然，员工也看得懂。\n第二个方法，管理多分店库存。\n你可以随时查看最新库存的数量。\n不用担心分店之间货不对盘，所有数据都集中在云端。\n这样补货时心里有数，不会压太多资金在货仓。\n第三个方法，查看销售报表。\n你可以实时掌握每一间分店的营业状况。\n不用等到月底才来对账，每天的数据都能直接看。\n这样做决策时简单又实用，不用再靠感觉猜。\n以前很多老板开多分店时，每个月的账目都要花很多天人工整理。\n用对方法以后，所有分店的数据一目了然，省下很多时间来顾顾客。\n美业配套每个License从RM149起。\n零售配套从RM99起。\n实际价钱，我们免费Demo后，才正式报价。\n你们几时方便让我们Demo？\nWhatsApp我们了解更多。", "tags": "Digitalise, Paperless, Cloudbased, Easy, Secure, AestheticClinic, BeautySalon, Spa, BestPosSystem, BeautyBusiness, AoikumoPosSoftware, AoikumoCares, Beauty, Aesthetics, Aesthetic, POSsystem, DigitalSolution, OneStopSolution, Aoikumo, einvoicing, einvoice, AestheticClinicManagementSystem, AppointmentAutomation, HealthcareAI", "bait": false, "type": "Image", "likes": 1, "comments": 0, "er": 0.33, "followers": 300, "date": "2026-09-29", "url": "https://www.instagram.com/p/Dd3tbbOCMGt/", "video": false, "ratio": 0, "score": 0.33, "status": "未处理", "x": 0}, {"id": "DfBRyo2BX_m", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "tunai.salon.app", "caption": "🎬 《Salon 老板的生存之战》正式上映！\n\nE-Invoice 时代来临，身边的 Salon 老板都纷纷升级 POS System，只有他还在犹豫不决… 😰\n\n市面上的 POS System 个个都说自己最好，到底该相信谁？🤔💥 选错系统，浪费的不只是钱，还有时间和生意效率！\n\n面对众多选择，他最终竟然选择了 TunaiPro？！👀\n\n究竟是什么让他下定决心？\n🎥 故事的结局，就让影片告诉你！\n\n💚 对的 POS，才能让你走得更远。\n\n#TunaiPro #SalonPOS #SalonManagement #EInvoiceMalaysia Salon老板 #fyp", "transcript": "从前吉隆坡以为发行屋老板听到一个消息没有电子发票罚款一夜之间整条街的发行屋都装了系统除了它的,可是几时套系统哥哥都说自己最好哪一套才真的就得了它的电后来他发现了五个功能每一个都打开一扇门What's up AI?凌晨两点顾客问有没有为他在睡觉加替他回复预约推荐,护理还会跟进一个预约都不漏智能配套管理这个经济不卖配套很难撑下去服务还没做前已经进账每次来自动扣水快用完一清二楚顾客荡安染发配方上次来的日子常买神墨这是一座金矿水该不色该推荐什么水很久没回来用经济算高级出级服务产品配套一件算好约定不用再熬夜对账发行师管理谁上班谁满当谁的回头课最多大吉隆坡64%的好评都写着发行师的名字谁是明星一目了然五个功能武扇门导板终于明白DOS只能让你合柜对的BOS才能让你活下去想看这五个功能怎么用留言色老免费示范", "brk": "Hook类型: 痛点直击\n结构: 政策恐慌引入 → 竞品对比痛点 → AI五大功能展示 → 引导留资转化\n为什么火: 紧扣马来西亚电子发票政策痛点，结合AI自动化预约与业绩管理切中老板要害\n改编角度: 聚焦美业与零售老板因电子发票与对账熬夜的痛点，用AI系统五大核心功能做实操演示", "my": "还在用传统方式来经营您的生意吗？🧐\n\n很多老板以为，换系统只要随便选一个便宜的就行。\n\n其实不是，选错系统不仅浪费时间，还会让账目越来越乱。\n\n是时候用更聪明的方式经营了。\n\n来看看SQL EBI POS系统能帮您解决什么问题。\n\n第一个功能，WhatsApp AI智能客服。\n\n深夜两点顾客发信息问有没有空档，系统会自动回复并处理预约。\n\n这样能减少人工操作，提高客户服务效率。\n\n第二个功能，配套管理。\n\n美业经营经常需要卖配套，服务还没做前资金就已经进账。\n\n每次来消费自动扣除次数，水光针用完一清二楚，不用再手动计算。\n\n第三个功能，客户资料管理。\n\n顾客上次染的发方、哪一天来的、常买什么产品，全部记录在系统里。\n\n有了合适的POS系统，所有数据一目了然、简单又实用。\n\n第四个功能，员工佣金与业绩管理。\n\n谁上班、谁业绩最高、谁的回头客最多，系统自动计算。\n\n不需要再花很多时间整理账目，也不用熬夜对账。\n\n第五个功能，电子发票解决方案。\n\n符合马来西亚LHDN的要求，简化财务流程，提升营运效率。\n\n以前每天花很多时间整理账目，不清楚库存数量，还在使用手写记录或Excel。\n\n现在数据一目了然，小小的改变也能带来巨大的提升。\n\nSQL EBI POS系统，美业每个License RM149起。\n\n实际价钱，我们免费Demo后，才正式报价。\n\nWhatsApp我们了解更多。", "tags": "TunaiPro, SalonPOS, SalonManagement, EInvoiceMalaysia, fyp", "bait": false, "type": "Video", "likes": 4, "comments": 0, "er": 0.27, "followers": 1478, "date": "2026-10-28", "url": "https://www.instagram.com/p/DfBRyo2BX_m/", "video": true, "ratio": 0, "score": 0.27, "status": "未处理", "x": 1.0}, {"id": "DfUElgxG5VK", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "qashiermy", "caption": "Race weekend at Sepang. 🏁🇲🇾\n\nThousands of fans filled the grandstands for the Petronas Grand Prix of Malaysia 2026, and the drinks at @clubkyokl kept flowing all weekend long.\n\nIce cold drinks, served nonstop, with QashierPay keeping every checkout quick at the counter.\n\nShorter queues. More time trackside. So no fan missed a lap. 💙\n\nGot a big event coming up? Power your next event with Qashier.\n\n#QashierMY #MalaysiaMotoGP #Sepang2026 #QashierPay #EventSolutions", "transcript": "", "brk": "Hook类型: 痛点直击\n结构: 大型活动现场 → 支付慢排长队 → Qashier快速结账提升体验\n为什么火: 结合顶级赛事热点，直击大型活动排队痛点，展示极速支付实力。\n改编角度: 强调美业零售大促或节假日高峰期，用POS秒级结算帮商家抓住客流不漏单。", "my": "还在用传统方式来经营您的生意吗？🧐\n预约混乱、没有系统化客户资料、销售手动记录、缺乏员工表现数据、没有清晰报表…🤯\n这些看似小问题，其实正在一点一点拖慢你的生意成长😱\n很多老板以为，管理多家分店或者处理复杂的会员配套，一定要花很多钱请专人，或者每天花好几个小时在后台慢慢对账。\n其实不是，真正拖慢生意的，是还在靠感觉经营，没有让系统帮你自动处理。\n用SQL EBI POS系统，轻松管理一切😎\n📌 第一，多分店资料互通。会员在A分店买的配套，可以在B分店用，所有分行数据实时同步，开新分店也不用重新建资料，每个 License RM149 起，云端费需要才加。\n📌 第二，完整会员与库存管理。快速完成结账，追踪库存水平，自动计算员工佣金，实时查看销售报表，所有数据一目了然、简单又实用。\n📌 第三，旧资料免费转移。换系统最怕以前的会员记录和账目乱掉，我们可以帮您把旧系统的资料安全转移过来，不用重新输入。\n以前老板每天手动记录销售，分店一多就对不上账，会员资料也到处都是。\n现在升级之后，所有分行的数据一目了然，不管是库存还是员工表现，都能实时查看。\n是时候用更聪明的方式经营🧐\nWhatsApp我们了解更多📲\nhttps://wa.me/message/UB23IU2KKWRVK1", "tags": "QashierMY, MalaysiaMotoGP, Sepang2026, QashierPay, EventSolutions", "bait": false, "type": "Video", "likes": 5, "comments": 0, "er": 0.2, "followers": 2444, "date": "2026-11-04", "url": "https://www.instagram.com/p/DfUElgxG5VK/", "video": true, "ratio": 0, "score": 0.2, "status": "未处理", "x": 1.0}, {"id": "DfWBKT3kib_", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "qashiermy", "caption": "Your business has the answers. Now you can just ask. 💬\n\nMeet QashierGM, your AI general manager built right into Qashier, now in Malaysia.\n\nIt already knows your business through your sales, payments and operations. So instead of digging through reports, you can simply ask, in English, Bahasa Melayu or Mandarin:\n\n✓ Why was yesterday’s payout lower than my sales?\n✓ What’s selling well, and what’s not?\n✓ What promotion should I run next?\n\nGet clear answers and practical recommendations based on your own business numbers. Less time figuring things out. More time running your business.\n\n▶️ Watch QashierGM in action.\n\nAlready using Qashier? Head to QashierHQ to explore QashierGM.\n\nNew to Qashier? Message us to see how one connected system can help you run your business smarter.\n\n#QashierMY #QashierGM #AIforBusiness #SMEMalaysia #BisnesMalaysia", "transcript": "", "brk": "Hook类型: 痛点直击\n结构: 抛出老板查账痛点 → 介绍AI助手 → 演示多语言提问与业务洞察\n为什么火: 用AI解决传统POS系统报表繁琐的痛点，切中老板省时省力的需求\n改编角度: 针对美业和零售店主，演示用AI一键查询员工业绩和客户复购数据", "my": "还在用传统方式来经营您的生意吗？🧐\n\n很多老板以为，想要看清楚每一间分行的账目，就必须天天花几个小时坐在店里，翻看厚厚的账本，或者把数据手动输入进 Excel 里面。\n\n其实不是，真正让生意变慢的，是缺乏一套把所有数据串联起来的系统。\n\n想要用更聪明的方式经营，您其实只需要这三个步骤。\n\n第一，把收银和会员管理系统化。\n每天的结账、库存水平和会员储值，全部自动记录在系统里面。\n不用再靠人工手写，省下很多整理账目的时间。\n每个 License RM149 起，就能让日常运作顺畅许多。\n\n第二，把所有分行的资料集中管理。\n不管是 5 家分店还是更多分店，会员在 A 分店买的配套，在 B 分店也能直接使用。\n老板不需要重新建档，系统会自动帮您处理好所有分店的资料共用。\n所有数据一目了然，简单又实用。\n\n第三，实时查看每间分行的销售报表。\n搭配云端费后，您可以随时随地用手机查看各分行的业绩。\n了解哪一个项目最赚钱，追踪员工的佣金计算。\n小小的改变，也能带来巨大的提升。\n\n以前开多家分店的老板，每次要对账都要等各分店员工 WhatsApp 汇报，常常漏掉细节。\n现在有了 SQL EBI POS系统，所有数据实时更新，还能直接处理电子发票。\n\n是时候升级了！🤩\nWhatsApp我们了解更多📲\nhttps://wa.me/message/UB23IU2KKWRVK1\n\n#ebipos #EBISoftware #ebi #SoftwareSolutions #system #software #BeautyWellness #Retail #eInvoiceSolutions #einvoicesoftware", "tags": "QashierMY, QashierGM, AIforBusiness, SMEMalaysia, BisnesMalaysia", "bait": false, "type": "Video", "likes": 2, "comments": 1, "er": 0.12, "followers": 2444, "date": "2026-11-05", "url": "https://www.instagram.com/p/DfWBKT3kib_/", "video": true, "ratio": 0, "score": 0.2, "status": "未处理", "x": 1.0}, {"id": "DfHcEWYPn7T", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "tunai.salon.app", "caption": "这次 TunaiPro 来到 Klang，探访 Enya Beauty～📍✨\n\n今天的主角是 Enya Beauty 的老板娘 Jessie 💕\n\n走进店里，马上被这里的护理项目吸引！从招牌轻抗衰护理，到细致的葵木面雕护理，每个项目都让人感受到 Jessie 对美与护理的用心 ✨\n\n店里还有 AI 皮肤检测仪，帮助顾客更了解自己的肌肤状况，也让护理体验多了一份专业感 🔍💆🏻‍♀️\n\n用心经营一家美容店，除了照顾好每位顾客，预约、顾客资料、会员记录和日常店务也都需要细心管理。\n\n因此，Enya Beauty 选择使用 TunaiPro，把日常管理集中在一个系统里，让 Jessie 和团队可以更有条理地处理店务，把更多时间留给顾客与护理体验 📱✨\n\n从专业护理到贴心服务，每个细节都看得出 Jessie 的用心 🥰\n\n📍 Enya Beauty, Klang\n\n#TunaiPro #Klang探店 #EnyaBeauty #美容护理 #轻抗衰护理 葵木面雕护理 AI皮肤检测 SalonManagement BusinessOwner MalaysiaBusiness", "transcript": "像我這種兜兜機有一種職業看到我的臉是完全沒打的這樣你就知道我今天要探什麼店了來我們一起歡迎老闆娘哈囉 我是NWD的串幫人傑西帶我去看你的店吧好的 來這間是我第一間的Trimmer Room這一間是做抗塞護理的喔 第一間這樣還有第二間呢對 對這間是第二間的Trimmer Room這一間是主打座浮水啊 兜兜敏感的肌膚這樣子你們不可以來比馬上做我們需要檢查皮膚先這個是皮膚檢測儀這是檢查皮膚的地方來來來來我要看這個Mashes到底是怎樣好做可以跟我們介紹一下嗎還要先做好了後後它就會粉洗這個就是檢查它的皮膚的那個油脂說它的油脂是屬於3度然後這個是AI粉洗出來的我有發生你店有一個儀式感就是這個這個是你的店的儀式感的嘛對 這個是從滿固客用過的安平通貨紙所以你都會把它收接在這裡對的而且現在我們就看一下你的儀式感所以就往上倒啊還是要放下地圖好 往下一點吧OK因為它是玻璃罐它會爆掉這是什麼水這就是在你們這裡邊你現在主打的服務是什麼清抗甩的護理叫做潰木面療護理它的好處是可以綁住疏通筋落08排毒然後排臉上的水腫還有可以提拉我們的蘋果機但是你有沒有什麼福利給我們跟我們在看的觀眾我有做這個FIRST FRIAR的優惠只需要160吧而已老闆娘 你用這什麼系統來管典我用這固耐波系統用這個系統真的是有那麼方便嗎對 因為它在REMARK那裡超級方便REMARK是你拿來記錄什麼的顧客的資料這樣你會推薦美容你能用這個固耐波系統嗎非常推薦因為這個系統超級方便讓我們很省時可以省掉很多被迫物所以顧客可以直接來做Word In找你們做服務嗎我這裡是沒有做Word In的失敗的朋友而已我們就只要怎樣找到你們電話語言電話語言這樣我們把那聯繫放15倍請問你今天的多少個觀眾5個5個就好再給你5秒的時間打廣告3 2 1歡迎大家來體驗我這個鬼木面調護理做出來又價格才168而已", "brk": "Hook类型: 探店带货/身份共鸣\n结构: 探访特色店铺 → 展示王牌项目 → 植入管理系统\n为什么火: 结合本地探店与老板娘真实心声，软性植入系统痛点。\n改编角度: 拍大马美容院探店，顺势展示POS系统如何帮店长省时省力。", "my": "还在用传统方式来经营您的生意吗？\n\n每天花很多时间整理账目？\n\n不清楚最新库存的数量？\n\n还在使用手写记录或Excel？\n\n这些看似小问题，其实正在一点一点拖慢你的生意成长。\n\n是时候用更聪明的方式经营。\n\n经营美业，最怕预约混乱、会员资料找不到。\n\n很多老板以为，换系统要花很多钱，或者很麻烦。\n\n其实只要选对工具，管理可以很简单。\n\n用SQL EBI POS系统，轻松管理一切。\n\n我们提供 POS 收银系统、会员管理、线上预约、库存管理及电子发票等功能。\n\nPOS System with CRM for Wellness，每个 License RM149 起，不含云端费，RM90 云端费客户需要才加。\n\n所有数据一目了然、简单又实用。\n\n会员在 A 分店买的配套，可以在 B 分店用，分店之间查得到彼此的消费记录。\n\n报表可以按分行比较，也可以看每间分店最受欢迎的项目。\n\n以前开多几家分店，会员资料和账目要分开记，常常对不上。\n\n有了合适的系统，所有分行的数据集中在一起，随时随地查看生意。\n\n小小的改变，也能带来巨大的提升。\n\nWhatsApp我们了解更多。\n\nhttps://wa.me/message/UB23IU2KKWRVK1", "tags": "TunaiPro, Klang探店, EnyaBeauty, 美容护理, 轻抗衰护理", "bait": false, "type": "Video", "likes": 3, "comments": 0, "er": 0.2, "followers": 1478, "date": "2026-10-30", "url": "https://www.instagram.com/p/DfHcEWYPn7T/", "video": true, "ratio": 0, "score": 0.2, "status": "未处理", "x": 0.7}, {"id": "DdTjb8AoCS3", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "qashiermy", "caption": "At a pop-up or market, you set up early and sell until the last customer leaves.\n\nA dead terminal halfway through means turning people away at your busiest moment.\n\nQashierX2 SuperTerminal™ runs for 7+ hours on a single charge, taking every payment, tracking your inventory, and recording your sales without stopping.\n\nSet up anywhere, sell all day, and dock it overnight to recharge.\nBuilt for merchants who sell on the move.\n\nSee how the QashierX2 SuperTerminal™ works for your business.\n📩 Message us to get started.\n\n#QashierMY #QashierX2 # #POS #ForEveryBusinessDream #QashierSuperTerminal", "transcript": "", "brk": "Hook类型: 痛点直击\n结构: 描述摆摊场景困境 → 揭示POS机没电痛点 → 给出长续航设备解决方案\n为什么火: 精准切中移动商户和快闪店主最怕设备没电漏单的极端痛点。\n改编角度: 针对美业与零售，强调美发/美甲店停电或预约高峰时POS不断电的重要性。", "my": "还在用传统方式来经营您的生意吗？🧐\n每天开店像打仗，收银机突然死机、网络不稳定，顾客在柜台前排长龙，您只能手忙脚乱地重新开机。\n许多老板以为，生意做大就一定要换很复杂的系统，或者花大钱重新拉网线。\n其实不是，真正拖慢您生意的，是没有用对适合您行业的工具。\n用SQL EBI POS系统，轻松管理一切😎\n第一，快速完成结账。不管是扫码还是刷卡，几秒钟就能搞定，高峰期再也不怕顾客排队等太久。\n第二，实时追踪库存水平。卖出什么，系统马上扣除，不用每天打烊后花几个小时慢慢点算库存。\n第三，自动计算员工佣金。每位员工的业绩清清楚楚，月底算薪水时省时又省力，不会产生争议。\n小小的改变，也能带来巨大的提升😎\n以前，每天花很多时间整理账目，库存对不上，会员资料到处散落。\n现在，所有数据一目了然、简单又实用，让您更聪明地经营生意✨\nWhatsApp我们了解更多📲\nhttps://wa.me/message/UB23IU2KKWRVK1\n\n#ebipos #EBISoftware #ebi #SoftwareSolutions #system #software #BeautyWellness #Retail #eInvoiceSolutions #einvoicesoftware", "tags": "QashierMY, QashierX2, POS, ForEveryBusinessDream, QashierSuperTerminal", "bait": false, "type": "Image", "likes": 0, "comments": 1, "er": 0.04, "followers": 2444, "date": "2026-09-15", "url": "https://www.instagram.com/p/DdTjb8AoCS3/", "video": false, "ratio": 0, "score": 0.12, "status": "未处理", "x": 0.6}, {"id": "DfdhuRajVZF", "tracker": "Software developer specialized in POS, CRM, online appointment for Beauty Wellness and Retail industries 竞对", "competitor": "aoikumo.cloud", "caption": "🪔 Happy Deepavali 2026 from Aoikumo™! ✨\n\nMay the Festival of Lights bring joy, prosperity, and new beginnings to you and your loved ones.\n\nWishing you a bright and beautiful Deepavali filled with happiness, peace, and meaningful moments shared with family and friends. May this festive season bring renewed hope and positivity for the year ahead. 💛\n\n#Digitalise #Paperless #Cloudbased #Easy #Secure #AestheticClinic #BeautySalon #Spa #BestPosSystem #BeautyBusiness #AoikumoPosSoftware #AoikumoCares #Beauty #Aesthetics #Aesthetic #POSsystem #DigitalSolution #OneStopSolution #Aoikumo #einvoicing #einvoice #AestheticClinicManagementSystem #AppointmentAutomation #HealthcareAI #HappyDeepavali", "transcript": "", "brk": "Hook类型: 节日祝福\n结构: 节日问候 → 品牌露出 → 行业标签\n为什么火: 借势传统节日传递温情，增强品牌亲和力与曝光。\n改编角度: 结合屠妖节送祝福，顺势推出美业收银与预约系统限时优惠。", "my": "还在用传统方式来经营您的生意吗？🧐\n\n每天花很多时间整理账目？\n不清楚最新库存的数量？\n还在使用手写记录或Excel？\n这些看似小问题，其实正在一点一点拖慢你的生意成长😱\n\n很多老板以为，要管理好多家分店和复杂的会员储值，一定要请很多行政人员，每天花几个小时手动对账，甚至觉得换系统会是一件很麻烦、旧资料会全部不见的大工程。\n\n其实不是这样的，真正拖慢您生意的，是没有用对系统来帮您自动处理这些繁琐的日常。\n\n是时候用更聪明的方式经营🧐\n\n第一，您可以把各分行的会员资料全部连接起来。\n会员在A分店买的配套和储值，直接可以在B分店使用。\n分店之间可以查得到彼此的消费记录，会员资料所有分店共用，开新分店不用重新建。\n有了合适的POS系统，所有数据一目了然、简单又实用✨\n\n第二，您可以实时查看各分行的销售报表。\n每间分店的业绩可以分开看，也可以合起来看。\n报表可以按分行比较，也可以看每间分店最受欢迎的项目。\n不同分行还可以设定不同的佣金方式，让系统自动计算，不用再手动算到头痛。\n\n第三，您可以轻松处理电子发票。\n系统自带电子发票功能，直接和LHDN对接。\n不用再另外花时间做繁琐的报税准备，让日常账目处理变得更顺畅。\n小小的改变，也能带来巨大的提升😎\n\n以前开五家分店的美容集团老板，每天都要等各分店员工传讯息来汇报业绩，会员资料和配套也常常对不上号，换系统时还很担心旧资料会弄丢。\n现在用SQL EBI POS系统，所有分行的会员和库存数据实时同步，总部随时随地看得到报表，旧资料也顺利转移过去，再也不用每天手动对账。\n\n是时候升级了！🤩\n升级至SQL EBI POS系统，改变您的经营模式✨\n\nWhatsApp我们了解更多📲\nhttps://wa.me/message/UB23IU2KKWRVK1", "tags": "Digitalise, Paperless, Cloudbased, Easy, Secure, AestheticClinic, BeautySalon, Spa, BestPosSystem, BeautyBusiness, AoikumoPosSoftware, AoikumoCares, Beauty, Aesthetics, Aesthetic, POSsystem, DigitalSolution, OneStopSolution, Aoikumo, einvoicing, einvoice, AestheticClinicManagementSystem, AppointmentAutomation, HealthcareAI, HappyDeepavali", "bait": false, "type": "Video", "likes": 0, "comments": 0, "er": 0.0, "followers": 300, "date": "2026-11-08", "url": "https://www.instagram.com/p/DfdhuRajVZF/", "video": true, "ratio": 0, "score": 0.0, "status": "未处理", "x": 0}]</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const SUPA = 'https://mrwpyjuidtibnyrmnqdg.supabase.co';
+const ANON = 'sb_publishable_rZxl90wfuK0UmMCUZcVi-w_FkwEWaMJ';
+const STATUSES = ["未处理", "拍摄中", "已处理", "跳过"];
+document.getElementById('updated').textContent = '更新于 2026-11-13 11:45 (GMT+8)';
+const PAGE = 48;
+let shown = PAGE;
+let videoOnly = false;
+let curTab = '全部';
+
+const $ = id => document.getElementById(id);
+const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
+const getKey = () => ANON;  // anon key is baked in — safe, can only change status
+const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const byRec = {}; DATA.forEach(d => byRec[d.id] = d);
+const TRENDS = [];
+DATA.forEach(d => {
+  d.days = d.date ? Math.max(0, Math.floor((Date.now() - new Date(d.date + 'T00:00:00')) / 864e5)) : null;
+  d.horse = d.followers > 0 && d.followers < 50000 && ((d.x || 0) >= 2 || d.score >= 10);
+});
+const PRESETS = [
+  { k: 'px', icon: 'trend', label: '真爆款 ×2+', f: d => (d.x || 0) >= 2 },
+  { k: 'pn', icon: 'star', label: '近7天', f: d => d.days !== null && d.days <= 7 },
+  { k: 'ph', icon: 'zap', label: '黑马', f: d => d.horse },
+  { k: 'pb', icon: 'magnet', label: '引流帖', f: d => d.bait },
+];
+const presetOn = {};
+
+function toast(msg, ok) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  t.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// filters
+const comps = [...new Set(DATA.map(d => d.competitor))].sort();
+comps.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = '@'+c; $('fComp').appendChild(o); });
+[...new Set(DATA.map(d => d.tracker))].forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; $('fTracker').appendChild(o); });
+
+function matchQ(d) {
+  const q = ($('fSearch').value || '').trim().toLowerCase();
+  return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor).toLowerCase().includes(q);
+}
+
+function basePool() {
+  const t = $('fTracker').value, c = $('fComp').value;
+  return DATA.filter(d => (!t || d.tracker === t) && (!c || d.competitor === c) && (!videoOnly || d.video)
+    && matchQ(d) && PRESETS.every(p => !presetOn[p.k] || p.f(d)));
+}
+
+function filtered() {
+  const s = $('fSort').value;
+  let arr = basePool().filter(d => curTab === '全部' || d.status === curTab);
+  const key = { score:'score', er:'er', comments:'comments', likes:'likes', x:'x' }[s];
+  if (s === 'date') arr.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  else arr.sort((a,b) => (b[key]||0) - (a[key]||0));
+  return arr;
+}
+
+let dragRec = null;
+
+function renderTabs() {
+  const pool = basePool();
+  const counts = { '全部': pool.length };
+  STATUSES.forEach(s => counts[s] = pool.filter(d => d.status === s).length);
+  $('tabs').innerHTML = '';
+  ['全部', ...STATUSES].forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (curTab === name ? ' on' : '') + (name !== '全部' ? ' droppable' : '');
+    el.innerHTML = esc(name) + ' <span class="cnt">' + counts[name] + '</span>';
+    el.onclick = () => { curTab = name; shown = PAGE; render(); };
+    if (name !== '全部') {
+      el.ondragover = e => { if (dragRec) { e.preventDefault(); el.classList.add('over'); } };
+      el.ondragleave = () => el.classList.remove('over');
+      el.ondrop = e => {
+        e.preventDefault(); el.classList.remove('over');
+        const d = byRec[dragRec]; dragRec = null;
+        if (d && d.status !== name) setStatus(d, name);
+      };
+    }
+    $('tabs').appendChild(el);
+  });
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const el = e.target, pid = el.dataset.pid;
+      if (!el.querySelector('iframe')) {
+        const f = document.createElement('iframe');
+        f.src = 'https://www.instagram.com/p/' + pid + '/embed/';
+        f.loading = 'lazy'; f.allow = 'autoplay; encrypted-media';
+        el.appendChild(f);
+      }
+      io.unobserve(el);
+    }
+  });
+}, { rootMargin: '400px' });
+
+async function setStatus(d, val) {
+  try {
+    const r = await fetch(SUPA + '/rest/v1/posts?post_id=eq.' + encodeURIComponent(d.id), {
+      method: 'PATCH',
+      headers: { 'apikey': ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: val })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    d.status = val;
+    cacheStatus(d.id, val);
+    toast('✓ @' + d.competitor + ' 已移到「' + val + '」', true);
+  } catch (e) {
+    toast('更新失败: ' + e.message + (String(e.message).includes('401') || String(e.message).includes('403') ? ' — 密钥无效?' : ''), false);
+  }
+  render();
+}
+
+function card(d, idx) {
+  const el = document.createElement('div');
+  el.className = 'card' + ((d.x || 0) >= 2 ? ' outlier' : '');
+  el.style.animationDelay = Math.min(idx % PAGE, 14) * 30 + 'ms';
+  el.draggable = true;
+  el.ondragstart = e => {
+    dragRec = d.id;
+    e.dataTransfer.effectAllowed = 'move';
+    el.classList.add('lifting');
+    document.body.classList.add('dragging');
+  };
+  el.ondragend = () => {
+    el.classList.remove('lifting');
+    document.body.classList.remove('dragging');
+    dragRec = null;
+  };
+  const typeIcon = d.video ? 'video' : (d.type === 'Carousel' ? 'layers' : 'image');
+  const days = d.days, horse = d.horse;
+  const ago = days === null ? '' : (days === 0 ? '今天' : days + '天前');
+  const lines = (d.caption || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const hook = lines[0] || '';
+  const tr = (d.transcript && d.transcript !== '(转录失败)' && d.transcript !== '(无口播内容)') ? d.transcript : '';
+  el.innerHTML = `
+    <div class="embed" data-pid="${d.id}"><div class="ph"><svg class="ic"><use href="#i-${typeIcon}"/></svg></div></div>
+    <div class="meta">
+      <div class="row1">
+        <span class="handle" title="拖到上方 tab 即可归类">${I('grip')}</span>
+        <a class="who" href="https://www.instagram.com/${d.competitor}/" target="_blank">@${d.competitor}</a>
+        <span class="badge">${d.type || '-'}</span>
+        ${days !== null && days <= 7 ? '<span class="badge bnew">' + I('star') + '新帖</span>' : ''}
+        ${horse ? '<span class="badge bhorse">' + I('zap') + '黑马</span>' : ''}
+        ${d.bait ? '<span class="badge bbait" title="「留言XX」引流打法 — 评论被引流放大,漏斗设计值得学">' + I('magnet') + '引流</span>' : ''}
+        <span class="date" title="${d.date || ''}">${ago}</span>
+      </div>
+      <div class="nums">
+        <span class="num hot" title="Viral Score">${I('flame')}<b>${d.score}</b></span>
+        ${(d.x || 0) >= 2 ? '<span class="num x" title="是自家平均热度的多少倍">' + I('trend') + '<b>×' + d.x + '</b></span>' : ''}
+        <span class="num er" title="Engagement Rate">${I('pct')}<b>${d.er}%</b></span>
+        <span class="num" title="Likes">${I('heart')}<b>${d.likes > 0 ? fmt(d.likes) : '隐藏'}</b></span>
+        <span class="num" title="Comments">${I('msg')}<b>${fmt(d.comments)}</b></span>
+        <span class="num" title="Followers">${I('users')}<b>${fmt(d.followers)}</b></span>
+      </div>
+      <div class="cap" onclick="this.classList.toggle('open')"></div>
+      ${d.brk ? '<div class="ai" onclick="this.classList.toggle(&quot;open&quot;)"></div>' : ''}
+      ${d.my ? '<div class="mine" onclick="this.classList.toggle(&quot;open&quot;)"></div>' : ''}
+      <div class="srow"><label>状态</label><select class="status btn s${d.status}"></select>
+        <button class="abtn copy" title="复制完整文案">${I('copy')}文案</button>
+        ${tr ? '<button class="abtn mic" title="复制视频口播逐字稿">' + I('mic') + '口播</button>' : ''}
+        ${d.my ? '<button class="abtn minec" title="复制我的改写口播稿(可直接拍)">' + I('mic') + '我的稿</button>' : ''}
+        <button class="abtn brief" title="复制拍摄 Brief(数据+Hook+AI拆解+我的稿+口播稿+文案)">${I('clip')}Brief</button>
+        <a class="abtn" href="${d.url}" target="_blank" title="打开 Instagram 原帖">${I('ext')}</a></div>
+    </div>`;
+  const capEl = el.querySelector('.cap');
+  const restTxt = lines.slice(1).join('\n');
+  capEl.innerHTML = hook ? '<b>' + esc(hook) + '</b>' + (restTxt ? '<br>' + esc(restTxt).replace(/\n/g, '<br>') : '') : '';
+  const aiEl = el.querySelector('.ai');
+  if (aiEl) aiEl.innerHTML = '<b>💡 AI 拆解</b><br>' + esc(d.brk).split(String.fromCharCode(10)).join('<br>');
+  const myEl = el.querySelector('.mine');
+  if (myEl) myEl.innerHTML = '<b>🎬 我的版本(可直接拍)</b><br>' + esc(d.my).split(String.fromCharCode(10)).join('<br>');
+  const sel = el.querySelector('.status');
+  STATUSES.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+  sel.value = d.status;
+  sel.onchange = () => setStatus(d, sel.value);
+  el.querySelector('.copy').onclick = () =>
+    navigator.clipboard.writeText(d.caption || '').then(() => toast('✓ 文案已复制', true));
+  const micBtn = el.querySelector('.mic');
+  if (micBtn) micBtn.onclick = () =>
+    navigator.clipboard.writeText(tr).then(() => toast('✓ 口播稿已复制', true));
+  const mineBtn = el.querySelector('.minec');
+  if (mineBtn) mineBtn.onclick = () =>
+    navigator.clipboard.writeText(d.my).then(() => toast('✓ 我的改写稿已复制', true));
+  el.querySelector('.brief').onclick = () => {
+    const NL = String.fromCharCode(10);
+    const parts = ['🎬 爆款参考 @' + d.competitor + ((d.x || 0) >= 2 ? '(自家平均 ×' + d.x + ')' : ''),
+      '📊 🔥' + d.score + ' | ER ' + d.er + '% | ❤️ ' + (d.likes > 0 ? fmt(d.likes) : '隐藏') +
+      ' | 💬 ' + fmt(d.comments) + ' | 👥 ' + fmt(d.followers) + (ago ? ' | ' + ago : ''),
+      '🔗 ' + d.url, '✍️ Hook: ' + hook];
+    if (d.brk) parts.push('——— AI 拆解 ———', d.brk);
+    if (d.my) parts.push('——— 我的版本(可直接拍)———', d.my);
+    if (tr) parts.push('——— 竞对原口播稿 ———', tr);
+    parts.push('——— 完整文案 ———', d.caption || '');
+    navigator.clipboard.writeText(parts.join(NL)).then(() => toast('✓ Brief 已复制,可直接发给拍摄/剪辑', true));
+  };
+  io.observe(el.querySelector('.embed'));
+  return el;
+}
+
+function render() {
+  renderTabs();
+  const arr = filtered();
+  const grid = $('grid'); grid.innerHTML = '';
+  arr.slice(0, shown).forEach((d, i) => grid.appendChild(card(d, i)));
+  $('empty').style.display = arr.length ? 'none' : '';
+  $('moreWrap').style.display = arr.length > shown ? '' : 'none';
+}
+
+
+function applyStatusCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem('st_cache') || '{}');
+    Object.keys(c).forEach(rid => { const d = byRec[rid]; if (d) d.status = c[rid]; });
+  } catch (e) {}
+}
+
+function cacheStatus(rid, val) {
+  try {
+    const c = JSON.parse(localStorage.getItem('st_cache') || '{}');
+    c[rid] = val; localStorage.setItem('st_cache', JSON.stringify(c));
+  } catch (e) {}
+}
+
+// live status refresh (so weekly-baked page shows current statuses)
+async function refreshStatuses() {
+  applyStatusCache(); render();  // last-known statuses first
+  if (Date.now() - (+localStorage.getItem('st_ts') || 0) < 600000) return;  // 10-min throttle
+  localStorage.setItem('st_ts', String(Date.now()));
+  const fresh = {};
+  try {
+    const r = await fetch(SUPA + '/rest/v1/posts?select=post_id,status', { headers: { 'apikey': ANON } });
+    if (!r.ok) return;
+    (await r.json()).forEach(row => {
+      const d = byRec[row.post_id];
+      if (d) d.status = row.status || '未处理';
+      if (row.status && row.status !== '未处理') fresh[row.post_id] = row.status;
+    });
+    localStorage.setItem('st_cache', JSON.stringify(fresh));
+    render();
+  } catch (e) {}
+}
+
+['fTracker','fComp','fSort'].forEach(id => $(id).onchange = () => { shown = PAGE; render(); });
+$('fSearch').oninput = () => { shown = PAGE; render(); };
+$('fVideo').onclick = () => { videoOnly = !videoOnly; $('fVideo').classList.toggle('on', videoOnly); shown = PAGE; render(); };
+$('moreBtn').onclick = () => { shown += PAGE; render(); };
+
+// preset quick filters
+$('presets').innerHTML = '<span class="lbl">快筛</span>';
+PRESETS.forEach(p => {
+  const c = document.createElement('span'); c.className = 'chip2';
+  c.innerHTML = I(p.icon) + esc(p.label);
+  c.onclick = () => { presetOn[p.k] = !presetOn[p.k]; c.classList.toggle('on', presetOn[p.k]); shown = PAGE; render(); };
+  $('presets').appendChild(c);
+});
+
+// trending hashtags among outlier posts
+if (TRENDS.length) {
+  $('trends').innerHTML = '<span class="lbl">爆款热词</span>';
+  TRENDS.forEach(([tag, n]) => {
+    const c = document.createElement('span'); c.className = 'chip2';
+    c.textContent = '#' + tag + ' ' + n;
+    c.onclick = () => { $('fSearch').value = $('fSearch').value === tag ? '' : tag; shown = PAGE; render(); };
+    $('trends').appendChild(c);
+  });
+} else { $('trends').style.display = 'none'; }
+
+render();
+refreshStatuses();
+</script>
+</body>
+</html>

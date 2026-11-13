@@ -21,6 +21,7 @@ Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY | ANTHROPIC_API_KEY
 
 import json
 import os
+import random
 import re
 import sys
 import time
@@ -73,12 +74,52 @@ def build_system():
         "2. 把话题、案例、场景换成【人设与规矩】里的受众痛点\n"
         "3. 全程用【人设与规矩】的语气,红线一条都不能碰\n"
         "4. 长度、结构和结尾照【人设与规矩】里的要求;那里没写的话,约 30-60 秒口播,开头第一句就是强钩子,结尾一句软性行动指引\n"
-        "5. 直接输出脚本正文本身,不要任何解释、标题、前后缀,不要写「以下是」或「脚本:」\n\n"
+        "5. 直接输出脚本正文本身,不要任何解释、标题、前后缀,不要写「以下是」或「脚本:」\n"
+        "6. 全文用简体中文,不要用繁体字\n"
+        "7. 开头第一句要为这一条单独写:【人设与规矩】里的开头例句只是语气参考,"
+        "不能原句照搬;每条稿子的第一句都要不一样,按用户消息里指定的开头方式来写\n\n"
         f"【人设与规矩】(所在领域:{NICHE})\n" + load_brand()
     )
 
 
 SYSTEM = build_system()
+
+# The voice guide's signature line kept getting copied as every script's first
+# sentence. Each post now gets its own opener style (rotated), sees the openers
+# already in use, and a copy of a banned line triggers one retry.
+BANNED_OPENERS = ("还在用传统方式来经营您的生意", "還在用傳統方式來經營您的生意")
+OPENER_STYLES = (
+    "具体场景:用老板一天里的一个具体画面开头(例如月底对账、分店打电话来问报表、客人在柜台等),不要用问句",
+    "一串短问题:连续 2-3 个很短的问题,直接点出这条帖子讲的那个痛点",
+    "颠覆一个看法:先说老板常有的一个想法,下一句马上翻过来",
+    "老板的心里话:用老板自己会脱口而出的一句话开头,像在跟朋友抱怨",
+    "借原帖的钩子:照竞对原帖第一句的钩子结构来写,内容换成美业老板的场景",
+    "直接给结论:第一句就说出这条稿子最想让老板记住的一个观点,不用问句",
+)
+
+
+def first_line(text):
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if line:
+            return line[:40]
+    return ""
+
+
+def is_banned(text):
+    head = re.sub(r"\s", "", first_line(text))
+    return any(head.startswith(b) for b in BANNED_OPENERS)
+
+
+def fetch_used_openers(limit=30):
+    """First lines of scripts already on the board, so new ones avoid them."""
+    try:
+        rows = sb("posts?select=my_script&my_script=not.is.null"
+                  f"&order=last_synced.desc.nullslast&limit={limit}")
+    except Exception:
+        return []
+    return [first_line(r.get("my_script")) for r in rows
+            if (r.get("my_script") or "").strip() not in ("", FAIL_MARK)]
 
 
 def _request(url, method="GET", data=None, headers=None, timeout=120):
@@ -122,7 +163,7 @@ def fetch_pending():
             or len(p.get("caption") or "") > 50]
 
 
-def build_prompt(p):
+def build_prompt(p, style="", avoid=(), strict=False):
     tr = p.get("transcript") or ""
     if tr in SKIP_TR:
         tr = ""
@@ -134,10 +175,18 @@ def build_prompt(p):
     if cap:
         body += f"\n【原帖文案(辅助参考)】\n{cap}\n"
     body += "\n请按系统指令,把上面这条爆款改写成【人设与规矩】里这个人的中文口播脚本。"
+    if style:
+        body += f"\n\n【这一条的开头方式】{style}"
+    banned = [b + "…" for b in BANNED_OPENERS[:1]]
+    recent = [a for a in dict.fromkeys(avoid) if a][:15]
+    body += "\n【不能用的开头】第一句不能是下面任何一句,也不能只换几个字:\n- " + \
+            "\n- ".join(banned + recent)
+    if strict:
+        body += "\n(上一次第一句又用了不能用的开头,这次必须换一个完全不同的开头)"
     return body
 
 
-def rewrite_gemini(key, p):
+def rewrite_gemini(key, prompt):
     while True:
         model = _gemini_models[0]
         cfg = {"maxOutputTokens": 2000, "temperature": 0.85}
@@ -148,7 +197,7 @@ def rewrite_gemini(key, p):
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 "POST",
                 {"system_instruction": {"parts": [{"text": SYSTEM}]},
-                 "contents": [{"role": "user", "parts": [{"text": build_prompt(p)}]}],
+                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                  "generationConfig": cfg},
                 {"x-goog-api-key": key}, 90)
         except urllib.error.HTTPError as exc:
@@ -164,11 +213,11 @@ def rewrite_gemini(key, p):
         return "".join(x.get("text", "") for x in parts if not x.get("thought")).strip()
 
 
-def rewrite_anthropic(key, p):
+def rewrite_anthropic(key, prompt):
     resp = _request(
         "https://api.anthropic.com/v1/messages", "POST",
         {"model": CLAUDE_MODEL, "max_tokens": 2000, "system": SYSTEM,
-         "messages": [{"role": "user", "content": build_prompt(p)}]},
+         "messages": [{"role": "user", "content": prompt}]},
         {"x-api-key": key, "anthropic-version": "2023-06-01"}, 90)
     parts = resp.get("content") or []
     return "".join(x.get("text", "") for x in parts if x.get("type") == "text").strip()
@@ -216,14 +265,25 @@ def main():
         print(f"capping at {POST_LIMIT} ({len(queue) - POST_LIMIT} left for next run)")
         queue = queue[:POST_LIMIT]
 
+    # openers already on the board (a full rewrite replaces them, so start clean)
+    used = [] if REWRITE_ALL else fetch_used_openers()
+    start = random.randrange(len(OPENER_STYLES))  # small weekly batches still vary
     ok = failed = 0
     for i, p in enumerate(queue, 1):
         who = p.get("competitor", "?")
+        style = OPENER_STYLES[(start + i - 1) % len(OPENER_STYLES)]
         try:
-            text = call(p)
+            text = call(build_prompt(p, style, used))
+            if text and is_banned(text):
+                print(f"  copied the banned opener -> retrying once")
+                time.sleep(delay)
+                text = call(build_prompt(p, style, used, strict=True)) or text
+                if is_banned(text):
+                    print(f"  WARNING: still the banned opener, saved anyway")
             if not text:
                 raise ValueError("empty response")
             save(p["post_id"], text)
+            used.insert(0, first_line(text))
             ok += 1
             print(f"[{i}/{len(queue)}] @{who} OK: {text[:50]}")
         except urllib.error.HTTPError as exc:

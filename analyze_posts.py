@@ -53,7 +53,11 @@ def _request(url, method="GET", data=None, headers=None, timeout=120):
         hdrs.setdefault("Content-Type", "application/json")
     req = urllib.request.Request(url, data=body, headers=hdrs, method=method)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+        raw = resp.read()
+    # Supabase PATCH with Prefer: return=minimal answers 204 with an empty body
+    if not raw:
+        return {}
+    return json.loads(raw)
 
 
 def sb(path, method="GET", data=None, prefer=None):

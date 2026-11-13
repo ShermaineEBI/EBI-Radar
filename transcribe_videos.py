@@ -64,9 +64,11 @@ def save_transcript(post_id, text):
 
 
 def is_page_link(url):
-    """FB posts store the post page, not a video file -> needs yt-dlp."""
+    """FB / TikTok / LinkedIn / 小红书 rows store the post page, not a video
+    file -> needs yt-dlp."""
     host = (urllib.parse.urlparse(url).hostname or "").lower()
-    return host.endswith("facebook.com") or host.endswith("fb.watch")
+    return host.endswith(("facebook.com", "fb.watch", "tiktok.com",
+                          "linkedin.com", "xiaohongshu.com"))
 
 
 def download_page_video(url, path):

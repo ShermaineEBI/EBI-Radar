@@ -153,8 +153,25 @@ IG 之外也可以抓竞对的 **Facebook 专页**,同一个看板、同一套�
 2. 账号名填专页网址 `facebook.com/` 后面那一段(例:`QashierMY`),不是专页显示名称
 3. 等周一自动跑,或到 Actions → Sync Content → Run workflow
 
-看板上 FB 的帖子会带「FB」标签,「来源」下拉选「FB竞对」就只看 FB。FB 那一步出错不会影响 IG。
+看板最上面的「平台」一排可以只看 Facebook,每张卡也有平台标签。FB 那一步出错不会影响 IG。
 FB 也走 Apify 计费(facebook-pages-scraper + facebook-posts-scraper),第一次跑完到 Apify → Billing 看一下用量。
+
+## 🎵 TikTok / LinkedIn / 小红书
+
+做法和 FB 一样:在 `competitors` 表加一行,`tracker` 写对应的代码。`加竞对.sql` 里有现成的例子。
+
+| 平台 | tracker | 账号名填什么 | 例子 |
+|---|---|---|---|
+| TikTok | `TT` | `tiktok.com/@` 后面那段 | `qashiermy` |
+| LinkedIn | `LI` | `linkedin.com/company/` 后面那段 | `qashier` |
+| 小红书 | `XHS` | 主页网址 `xiaohongshu.com/user/profile/…`(整条贴上,不能用 xhslink 短链) | |
+
+- **显示名称**:小红书账号是一串 24 位 ID,LinkedIn 有时挂在母公司名下。在 `notes` 栏写名字(例:`Aoikumo`),看板就显示这个名字。
+- **看板**:TikTok、LinkedIn 用官方 embed 播放;小红书没有 embed,卡片显示封面,点「在小红书打开」看原帖。
+- **转录**:TikTok / LinkedIn / 小红书的视频也会自动转录(用 yt-dlp 下载)。个别平台挡下载时,那条会在下周再试。
+- **费用**(Apify 按条计费,每周一次):TikTok 每条约 US$0.003,LinkedIn 每条约 US$0.002 + 每个公司 US$0.004,小红书每次约 US$0.08 + 每条笔记约 US$0.006。
+- **Apify 免费方案的限制**:小红书那个 actor 在免费方案只给 15 次试跑、每次 1 个账号、最多 20 条笔记。要长期抓小红书需要付费方案。
+- 每个平台单独一步,哪一步出错都不影响其他平台。
 
 ## 卡住了
 

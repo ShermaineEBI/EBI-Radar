@@ -25,7 +25,8 @@ CDN links let previously skipped videos transcribe); status / transcript /
 ai_breakdown are never in the payload, so worked rows are never clobbered.
 engagement_rate and viral_score are generated columns — never written.
 
-Env (required): TRACKER ("IG", "FB" or "AI"), APIFY_TOKEN, SUPABASE_URL,
+Env (required): TRACKER ("IG", "FB", "TT" TikTok, "LI" LinkedIn,
+                "XHS" 小红书 or "AI"), APIFY_TOKEN, SUPABASE_URL,
                 SUPABASE_SERVICE_ROLE_KEY
 Env (tuning, all optional -- set as GitHub Actions *Variables*):
      MIN_ER (0.02)  MIN_COMMENTS (15)  MIN_ENGAGE (20)  OUTLIER_X (1.5)
@@ -136,15 +137,61 @@ def fb_page_url(handle):
     return f"https://www.facebook.com/{handle}"
 
 
+def tt_handle(n):
+    """'https://www.tiktok.com/@qashiermy?lang=en' / '@qashiermy' -> 'qashiermy'."""
+    n = (n or "").strip()
+    if "tiktok.com" in n:
+        u = urllib.parse.urlparse(n if "://" in n else "https://" + n)
+        parts = [p for p in u.path.split("/") if p]
+        n = parts[0] if parts and parts[0].startswith("@") else ""
+    return n.lstrip("@").strip().lower()
+
+
+def li_handle(n):
+    """'https://www.linkedin.com/company/qashier/posts/' -> 'qashier'."""
+    n = (n or "").strip()
+    if "linkedin.com" in n:
+        u = urllib.parse.urlparse(n if "://" in n else "https://" + n)
+        parts = [p for p in u.path.split("/") if p]
+        n = (parts[1] if len(parts) > 1 and parts[0] in ("company", "showcase", "school")
+             else "")
+    return n.lstrip("@").strip().lower()
+
+
+def li_page_url(handle):
+    return f"https://www.linkedin.com/company/{handle}/"
+
+
+def xhs_handle(n):
+    """'https://www.xiaohongshu.com/user/profile/67a1eb79...?xsec_token=..' -> user id."""
+    n = (n or "").strip()
+    if "xiaohongshu.com" in n:
+        parts = [p for p in urllib.parse.urlparse(
+            n if "://" in n else "https://" + n).path.split("/") if p]
+        n = parts[2] if len(parts) > 2 and parts[:2] == ["user", "profile"] else ""
+    return n.strip().lower()
+
+
+def xhs_profile_url(handle):
+    return f"https://www.xiaohongshu.com/user/profile/{handle}"
+
+
+HANDLERS = {"FB": fb_handle, "TT": tt_handle, "LI": li_handle, "XHS": xhs_handle}
+
+
 def fetch_competitors():
     rows = sb(f"competitors?select=username&tracker=eq.{TRACKER}&active=is.true")
     names = []
     for r in rows:
         n = (r.get("username") or "").strip()
-        if TRACKER == "FB":
-            n = fb_handle(n)
-            if n:
-                names.append(n)
+        if TRACKER in HANDLERS:
+            h = HANDLERS[TRACKER](n)
+            if TRACKER == "XHS" and h and not re.fullmatch(r"[0-9a-f]{24}", h):
+                print(f"  WARNING: skipping '{n[:60]}' — XHS needs the profile link "
+                      "xiaohongshu.com/user/profile/<24 位 ID>, not a short xhslink")
+                continue
+            if h:
+                names.append(h)
             continue
         if "instagram.com" in n:
             parts = [p for p in urllib.parse.urlparse(n).path.split("/") if p]
@@ -228,6 +275,8 @@ def run_actor(token, actor_id, actor_input, label):
 
 def parse_date(v):
     if isinstance(v, (int, float)):
+        if v > 1e11:  # milliseconds (LinkedIn)
+            v = v / 1000
         return datetime.fromtimestamp(v, tz=timezone.utc).date().isoformat()
     if isinstance(v, str):
         try:
@@ -298,6 +347,114 @@ def fb_extract(p):
         "thumbnail_url": thumb,
         "video_url": url if is_video else None,
         "hashtags": ", ".join(re.findall(r"#(\w+)", text)),
+        "is_video": is_video,
+    }
+
+
+def tt_extract(p):
+    """Apify tiktok-profile-scraper item -> common post fields (None = broken).
+    video_url is the TikTok page; transcribe_videos.py fetches it with yt-dlp."""
+    vid = str(p.get("id") or "").strip()
+    if p.get("error") or not vid:
+        return None
+    a = p.get("authorMeta") or {}
+    user = tt_handle(a.get("name") or a.get("uniqueId") or "")
+    url = p.get("webVideoUrl") or f"https://www.tiktok.com/@{user}/video/{vid}"
+    vm = p.get("videoMeta") or {}
+    slides = bool(p.get("isSlideshow"))
+    tags = [h.get("name") for h in (p.get("hashtags") or [])
+            if isinstance(h, dict) and h.get("name")]
+    return {
+        "competitor": user,
+        "post_id": "tt_" + vid,
+        "caption": p.get("text") or "",
+        "post_type": "Carousel" if slides else "Video",
+        "likes": int(p.get("diggCount") or 0),
+        "comments": int(p.get("commentCount") or 0),
+        "post_date": parse_date(p.get("createTimeISO") or p.get("createTime")),
+        "post_url": url,
+        "thumbnail_url": vm.get("coverUrl") or vm.get("originalCoverUrl") or None,
+        "video_url": None if slides else url,
+        "hashtags": ", ".join(tags),
+        "is_video": not slides,
+    }
+
+
+def _li_competitor(p):
+    """Match on the company URL WE asked for first, then the post author."""
+    q = p.get("query")
+    cands = [q.get("targetUrl") or q.get("url") if isinstance(q, dict) else q,
+             p.get("inputUrl"), p.get("targetUrl")]
+    a = p.get("author") or {}
+    cands += [a.get("linkedinUrl"), a.get("universalName")]
+    for c in cands:
+        if isinstance(c, str) and c and not c.startswith("http") and "/" not in c:
+            return c.strip().lower()
+        h = li_handle(c) if isinstance(c, str) else ""
+        if h:
+            return h
+    return ""
+
+
+def li_extract(p):
+    """Apify harvestapi linkedin-company-posts item -> common post fields."""
+    pid = str(p.get("id") or "").strip()
+    if p.get("error") or not pid.isdigit():
+        return None
+    eng = p.get("engagement") or {}
+    images = [i for i in (p.get("postImages") or []) if isinstance(i, dict)]
+    video = p.get("postVideo") if isinstance(p.get("postVideo"), dict) else {}
+    doc = p.get("document") if isinstance(p.get("document"), dict) else {}
+    cover = ((doc.get("coverPages") or [{}])[0].get("imageUrls") or [None])[0] \
+        if doc.get("coverPages") else None
+    url = p.get("linkedinUrl") or f"https://www.linkedin.com/feed/update/urn:li:activity:{pid}/"
+    text = p.get("content") or ""
+    is_video = bool(video)
+    return {
+        "competitor": _li_competitor(p),
+        "post_id": "li_" + pid,
+        "caption": text,
+        "post_type": "Video" if is_video else ("Carousel" if doc or len(images) > 1
+                                               else ("Image" if images else "Text")),
+        "likes": int(eng.get("likes") or 0),
+        "comments": int(eng.get("comments") or 0),
+        "post_date": parse_date((p.get("postedAt") or {}).get("timestamp")
+                                or (p.get("postedAt") or {}).get("date")),
+        "post_url": url,
+        "thumbnail_url": (video.get("thumbnailUrl") or (images[0].get("url") if images else None)
+                          or cover),
+        # a direct file when LinkedIn gives one, else the post page for yt-dlp
+        "video_url": (video.get("videoUrl") or url) if is_video else None,
+        "hashtags": ", ".join(re.findall(r"#(\w+)", text)),
+        "is_video": is_video,
+    }
+
+
+def xhs_extract(n):
+    """One note from zen-studio rednote-user-profile-scraper (with _uid added)."""
+    nid = str(n.get("id") or n.get("note_id") or "").strip()
+    if not nid or not n.get("_uid"):
+        return None
+    title = (n.get("display_title") or n.get("title") or "").strip()
+    desc = re.sub(r"\[话题\]#", "", n.get("desc") or "").strip()
+    caption = desc if title and title in desc else "\n".join(x for x in (title, desc) if x)
+    is_video = (n.get("type") or "").lower() == "video"
+    tok = n.get("xsec_token")
+    url = f"https://www.xiaohongshu.com/explore/{nid}" + (
+        f"?xsec_token={urllib.parse.quote(tok)}&xsec_source=pc_user" if tok else "")
+    imgs = [i for i in (n.get("images_list") or []) if isinstance(i, dict)]
+    return {
+        "competitor": n["_uid"],
+        "post_id": "xhs_" + nid,
+        "caption": caption,
+        "post_type": "Video" if is_video else ("Carousel" if len(imgs) > 1 else "Image"),
+        "likes": int(n.get("likes") or n.get("liked_count") or 0),
+        "comments": int(n.get("comments_count") or 0),
+        "post_date": parse_date(n.get("create_time")),
+        "post_url": url,
+        "thumbnail_url": (imgs[0].get("url") if imgs else None),
+        "video_url": url if is_video else None,
+        "hashtags": ", ".join(re.findall(r"#(\w+)", desc)),
         "is_video": is_video,
     }
 
@@ -465,6 +622,101 @@ def scrape_fb(token, names):
     return followers, posts, fb_extract
 
 
+def _report_followers(names, followers, where):
+    print(f"  followers for {len([n for n in names if n in followers])}/{len(names)}")
+    for n in names:
+        if n not in followers:
+            print(f"  WARNING: no follower count for {where(n)} — its posts are skipped. "
+                  "Check the name in the competitors table.")
+
+
+def scrape_tt(token, names):
+    # one call: every video carries its author's follower count (authorMeta.fans)
+    posts = run_actor(token, "clockworks~tiktok-profile-scraper",
+                      {"profiles": names, "profileScrapeSections": ["videos"],
+                       "profileSorting": "latest", "resultsPerPage": RESULTS_LIMIT,
+                       "oldestPostDateUnified": f"{DAYS_BACK} days"}, "TikTok videos")
+    followers = {}
+    for p in posts:
+        a = p.get("authorMeta") or {}
+        u, c = tt_handle(a.get("name") or ""), a.get("fans") or 0
+        if u and c:
+            followers[u] = max(followers.get(u, 0), int(c))
+    print(f"  scraped {len(posts)} videos (last {DAYS_BACK} days, <= {RESULTS_LIMIT}/account)")
+    _report_followers(names, followers, lambda n: f"tiktok.com/@{n} (or no video in "
+                      f"the last {DAYS_BACK} days)")
+    if posts and not followers:
+        print(f"  DEBUG video fields: {sorted(posts[0])[:40]}")
+    return followers, posts, tt_extract
+
+
+def scrape_li(token, names):
+    urls = [li_page_url(n) for n in names]
+    comps = run_actor(token, "harvestapi~linkedin-company", {"companies": urls},
+                      "Step 1 LinkedIn companies")
+    followers = {}
+    for i, c in enumerate(comps):
+        cnt = c.get("followerCount") or c.get("followers") or 0
+        keys = [c.get("universalName"), c.get("linkedinUrl"), c.get("url"),
+                c.get("input"), c.get("query") if isinstance(c.get("query"), str) else None]
+        hs = {k.strip().lower() if "/" not in k else li_handle(k)
+              for k in keys if isinstance(k, str) and k}
+        for h in hs:
+            if h in names and cnt:
+                followers.setdefault(h, int(cnt))
+    if comps and not followers:
+        print(f"  DEBUG company fields: {sorted(comps[0])[:40]}")
+    _report_followers(names, followers, lambda n: f"linkedin.com/company/{n}")
+
+    since = (datetime.now(timezone.utc).date().toordinal() - DAYS_BACK)
+    posts = run_actor(token, "harvestapi~linkedin-company-posts",
+                      {"targetUrls": urls, "maxPosts": RESULTS_LIMIT,
+                       "postedLimitDate": datetime.fromordinal(since).date().isoformat(),
+                       "includeReposts": False, "includeQuotePosts": True,
+                       "scrapeReactions": False, "scrapeComments": False},
+                      "Step 2 LinkedIn posts")
+    print(f"  scraped {len(posts)} posts (last {DAYS_BACK} days, <= {RESULTS_LIMIT}/page)")
+    matched = {(li_extract(p) or {}).get("competitor") for p in posts} & set(names)
+    if posts and not matched:
+        print(f"  DEBUG post fields: {sorted(posts[0])[:40]}")
+        print(f"  DEBUG author: {json.dumps(posts[0].get('author'), ensure_ascii=False)[:300]}")
+    return followers, posts, li_extract
+
+
+def scrape_xhs(token, names):
+    items = run_actor(token, "zen-studio~rednote-user-profile-scraper",
+                      {"profileUrls": [xhs_profile_url(n) for n in names],
+                       "includeNotes": True, "maxNotesPerProfile": RESULTS_LIMIT},
+                      "XHS profiles + notes")
+    cutoff = datetime.now(timezone.utc).timestamp() - DAYS_BACK * 86400
+    followers, posts, old = {}, [], 0
+    for it in items:
+        for k in ("free_preview_notice", "limit_reached", "message"):
+            if it.get(k):
+                print(f"  NOTE from actor ({k}): {str(it[k])[:200]}")
+        prof = it.get("profile") or {}
+        uid = xhs_handle(it.get("_user_id") or prof.get("userid") or it.get("_input") or "")
+        fans = prof.get("fans") or next((x.get("count") for x in (prof.get("interactions") or [])
+                                         if isinstance(x, dict) and x.get("type") == "fans"), 0)
+        if uid and fans:
+            followers[uid] = int(fans)
+        if uid and prof.get("nickname"):
+            print(f"  {uid} = {prof['nickname']} · {int(fans or 0):,} 粉")
+        for n in it.get("notes") or []:
+            ts = n.get("create_time") or 0
+            ts = ts / 1000 if ts > 1e11 else ts
+            if ts and ts < cutoff:
+                old += 1
+                continue
+            posts.append({**n, "_uid": uid})
+    print(f"  {len(posts)} notes in the last {DAYS_BACK} days ({old} older skipped)")
+    _report_followers(names, followers, lambda n: xhs_profile_url(n))
+    return followers, posts, xhs_extract
+
+
+SCRAPERS = {"FB": scrape_fb, "TT": scrape_tt, "LI": scrape_li, "XHS": scrape_xhs}
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -486,8 +738,8 @@ def main():
           f"engagements>={OUTLIER_X}x own median | floor {MIN_ENGAGE} | "
           f"keep {TOP_N_PER_COMP}-{MAX_PER_COMP} per account")
 
-    if TRACKER == "FB":
-        followers, posts, extract = scrape_fb(token, names)
+    if TRACKER in SCRAPERS:
+        followers, posts, extract = SCRAPERS[TRACKER](token, names)
     else:
         followers, posts, extract = scrape_ig(token, names)
 

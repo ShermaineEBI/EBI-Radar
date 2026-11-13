@@ -16,6 +16,17 @@ insert into competitors (username, tracker, active) values
   ('新FB专页1', 'FB', true)
 on conflict do nothing;
 
+-- ---------- TikTok / LinkedIn / 小红书 ----------
+-- TikTok   'TT' : tiktok.com/@ 后面那段           ✅ qashiermy
+-- LinkedIn 'LI' : linkedin.com/company/ 后面那段  ✅ qashier
+-- 小红书   'XHS': 整条主页网址 xiaohongshu.com/user/profile/<24 位 ID>(不能用 xhslink 短链)
+-- notes 栏写的名字会显示在看板上(小红书 / LinkedIn 用得到)。
+insert into competitors (username, tracker, active, notes) values
+  ('新TikTok账号', 'TT', true, null),
+  ('新LinkedIn公司', 'LI', true, '显示名称'),
+  ('https://www.xiaohongshu.com/user/profile/新小红书ID', 'XHS', true, '显示名称')
+on conflict do nothing;
+
 -- 想停掉某个竞对(保留数据,只是不再抓):
 -- update competitors set active = false where lower(username) = lower('要停的账号名');
 

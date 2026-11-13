@@ -31,3 +31,29 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python sync_content.py
+      # TikTok / LinkedIn / 小红书(competitors 表里 tracker = 'TT' / 'LI' / 'XHS')。
+      # 同样出错不挡后面的步骤;表里没有这个平台的竞对就直接跳过,不花钱。
+      - name: Sync TikTok competitors
+        continue-on-error: true
+        env:
+          TRACKER: TT
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python sync_content.py
+      - name: Sync LinkedIn competitors
+        continue-on-error: true
+        env:
+          TRACKER: LI
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python sync_content.py
+      - name: Sync Xiaohongshu competitors
+        continue-on-error: true
+        env:
+          TRACKER: XHS
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python sync_content.py

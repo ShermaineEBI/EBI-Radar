@@ -27,7 +27,8 @@ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")  # public key, baked
 # Falls back to sensible defaults so the page still builds before they're set.
 BRAND = os.environ.get("BRAND") or "爆款雷达"
 SYNC_DAY = os.environ.get("SYNC_DAY") or "每周"
-TRACKER_LABEL = {"IG": "Instagram", "FB": "Facebook"}
+TRACKER_LABEL = {"IG": "Instagram", "FB": "Facebook", "TT": "TikTok",
+                 "LI": "LinkedIn", "XHS": "小红书"}
 STATUSES = ["未处理", "拍摄中", "已处理", "跳过"]
 
 # comment-bait CTA patterns — require an explicit gated keyword:
@@ -80,6 +81,18 @@ def _handle(name):
         if not parts or parts[0] in ("p", "reel", "reels", "stories", "tv"):
             return ""
         n = parts[0]
+    elif "tiktok.com" in n:
+        parts = [p for p in urllib.parse.urlparse(n if "://" in n else "https://" + n)
+                 .path.split("/") if p]
+        n = parts[0] if parts and parts[0].startswith("@") else ""
+    elif "linkedin.com" in n:
+        parts = [p for p in urllib.parse.urlparse(n if "://" in n else "https://" + n)
+                 .path.split("/") if p]
+        n = parts[1] if len(parts) > 1 and parts[0] in ("company", "showcase", "school") else ""
+    elif "xiaohongshu.com" in n:
+        parts = [p for p in urllib.parse.urlparse(n if "://" in n else "https://" + n)
+                 .path.split("/") if p]
+        n = parts[2] if len(parts) > 2 and parts[:2] == ["user", "profile"] else ""
     return n.lstrip("@").strip().lower()
 
 
@@ -90,7 +103,24 @@ def fetch_active_handles(key):
     skips filtering, so a key problem or an older schema still builds the full
     dashboard instead of an empty one.
     """
-    url = f"{SUPABASE_URL}/rest/v1/competitors?select=username,active"
+    rows = _competitor_rows(key)
+    if rows is None:
+        return None
+    if not rows:
+        print("  WARNING: the competitors table is empty - "
+              "showing every account that has posts")
+        return None
+    return {h for h in (_handle(r.get("username"))
+                        for r in rows if r.get("active")) if h}
+
+
+_COMP_ROWS = []
+
+
+def _competitor_rows(key):
+    if _COMP_ROWS:
+        return _COMP_ROWS[0]
+    url = f"{SUPABASE_URL}/rest/v1/competitors?select=username,active,tracker,notes"
     req = urllib.request.Request(url, headers={"apikey": key})
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
@@ -99,12 +129,23 @@ def fetch_active_handles(key):
         print(f"  WARNING: cannot read the competitors table ({exc}) - "
               "showing every account that has posts")
         return None
-    if not rows:
-        print("  WARNING: the competitors table is empty - "
-              "showing every account that has posts")
-        return None
-    return {h for h in (_handle(r.get("username"))
-                        for r in rows if r.get("active")) if h}
+    _COMP_ROWS.append(rows)
+    return rows
+
+
+def fetch_display_names(key):
+    """小红书 handles are 24-character IDs and some LinkedIn pages sit under the
+    parent company (Tunai = julytech-sdn-bhd), so for those two the board shows
+    the name typed in the competitors table's `notes` column (e.g. 'Aoikumo')."""
+    names = {}
+    for r in _competitor_rows(key) or []:
+        note = (r.get("notes") or "").strip()
+        if r.get("tracker") in NAMED and note and not note.startswith("系统推荐"):
+            names[(r["tracker"], _handle(r.get("username")))] = note.splitlines()[0][:40]
+    return names
+
+
+NAMED = ("XHS", "LI")
 
 
 def normalize(r):
@@ -118,8 +159,11 @@ def normalize(r):
     return {
         "id": post_id,
         "tracker": TRACKER_LABEL.get(r.get("tracker"), r.get("tracker") or "AI Competitors"),
-        "src": "FB" if r.get("tracker") == "FB" else "IG",
+        "src": r.get("tracker") if r.get("tracker") in ("FB", "TT", "LI", "XHS") else "IG",
         "competitor": r.get("competitor") or "",
+        "who": "@" + (r.get("competitor") or ""),
+        # 小红书 has no embed player: the card shows the cover image instead
+        "thumb": (r.get("thumbnail_url") or "") if r.get("tracker") == "XHS" else "",
         "caption": caption,
         "transcript": tr if tr not in ("(转录失败)", "(视频不可用)", "(无口播内容)") else "",
         "brk": "" if brk.strip() == "(拆解失败)" else brk[:600],
@@ -260,6 +304,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
   .embed { position: relative; width: 100%; aspect-ratio: 4/5; background: #080b10; }
   .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .embed .cover { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+    text-decoration: none; overflow: hidden; }
+  .embed .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .embed .cover .open { position: relative; margin-bottom: 14px; background: #ff2442; color: #fff;
+    font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.45); }
   .embed .ph { position: absolute; inset: 0; display: grid; place-items: center;
     background: linear-gradient(110deg, #0b0e15 8%, #121826 18%, #0b0e15 33%);
     background-size: 200% 100%; animation: shimmer 1.5s linear infinite; }
@@ -280,10 +330,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .badge.bbait { color: var(--accent); border-color: rgba(94,161,255,.4); background: rgba(94,161,255,.07); }
   .badge.pig { color: #fff; border-color: transparent; background: linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af); font-weight: 600; }
   .badge.pfb { color: #fff; border-color: transparent; background: #1877f2; font-weight: 600; }
+  .badge.ptt { color: #fff; border-color: transparent; background: #000; box-shadow: inset 2px 0 #25f4ee, inset -2px 0 #fe2c55; font-weight: 600; }
+  .badge.pli { color: #fff; border-color: transparent; background: #0a66c2; font-weight: 600; }
+  .badge.pxhs { color: #fff; border-color: transparent; background: #ff2442; font-weight: 600; }
   .chip2.plat { font-weight: 600; }
   .chip2.plat .n { opacity: .7; font-weight: 500; }
   .chip2.plat.ig.on { color: #fff; border-color: transparent; background: linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af); }
   .chip2.plat.fb.on { color: #fff; border-color: transparent; background: #1877f2; }
+  .chip2.plat.tt.on { color: #fff; border-color: transparent; background: #000; box-shadow: inset 2px 0 #25f4ee, inset -2px 0 #fe2c55; }
+  .chip2.plat.li.on { color: #fff; border-color: transparent; background: #0a66c2; }
+  .chip2.plat.xhs.on { color: #fff; border-color: transparent; background: #ff2442; }
   .chip2.plat.all.on { color: var(--text); border-color: var(--border-hi); background: var(--card); }
   .date { margin-left: auto; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
 
@@ -406,7 +462,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg>没有符合条件的帖子</div>
   <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">载入更多</button></div>
 </main>
-<footer>数据来源 Supabase · __SYNC_DAY__自动更新 · 状态更改即时同步全团队 · 视频由 Instagram / Facebook 官方 embed 播放</footer>
+<footer>数据来源 Supabase · __SYNC_DAY__自动更新 · 状态更改即时同步全团队 · 视频由 Instagram / Facebook / TikTok / LinkedIn 官方 embed 播放 · 小红书显示封面,点开看原帖</footer>
 <div id="toast"></div>
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -421,18 +477,30 @@ let videoOnly = false;
 let curTab = '全部';
 let curPlat = '';
 try { curPlat = localStorage.getItem('plat') || ''; } catch (e) {}
-const PLATS = [['', '全部平台', 'all'], ['IG', 'Instagram', 'ig'], ['FB', 'Facebook', 'fb']];
-const platBadge = d => d.src === 'FB' ? '<span class="badge pfb">Facebook</span>' : '<span class="badge pig">Instagram</span>';
+const PLATS = [['', '全部平台', 'all'], ['IG', 'Instagram', 'ig'], ['FB', 'Facebook', 'fb'],
+  ['TT', 'TikTok', 'tt'], ['LI', 'LinkedIn', 'li'], ['XHS', '小红书', 'xhs']];
+const platBadge = d => '<span class="badge p' + platOf(d).cls + '">' + platOf(d).label + '</span>';
 
 const $ = id => document.getElementById(id);
 const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
 const getKey = () => ANON;  // anon key is baked in — safe, can only change status
 const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const prof = d => d.src === 'FB' ? 'https://www.facebook.com/' + d.competitor : 'https://www.instagram.com/' + d.competitor + '/';
-const embedSrc = d => d.src === 'FB'
-  ? 'https://www.facebook.com/plugins/' + (d.video ? 'video' : 'post') + '.php?show_text=true&width=500&href=' + encodeURIComponent(d.url)
-  : 'https://www.instagram.com/p/' + d.id + '/embed/';
+const PLAT = {
+  IG:  { label: 'Instagram', short: 'IG',  cls: 'ig',  prof: h => 'https://www.instagram.com/' + h + '/' },
+  FB:  { label: 'Facebook',  short: 'FB',  cls: 'fb',  prof: h => 'https://www.facebook.com/' + h },
+  TT:  { label: 'TikTok',    short: 'TT',  cls: 'tt',  prof: h => 'https://www.tiktok.com/@' + h },
+  LI:  { label: 'LinkedIn',  short: 'in',  cls: 'li',  prof: h => 'https://www.linkedin.com/company/' + h + '/' },
+  XHS: { label: '小红书',    short: '小红书', cls: 'xhs', prof: h => 'https://www.xiaohongshu.com/user/profile/' + h },
+};
+const platOf = d => PLAT[d.src] || PLAT.IG;
+const prof = d => platOf(d).prof(d.competitor);
+const embedSrc = d => ({
+  FB: () => 'https://www.facebook.com/plugins/' + (d.video ? 'video' : 'post') + '.php?show_text=true&width=500&href=' + encodeURIComponent(d.url),
+  TT: () => 'https://www.tiktok.com/player/v1/' + d.id.replace(/^tt_/, '') + '?music_info=1&description=1',
+  LI: () => 'https://www.linkedin.com/embed/feed/update/urn:li:activity:' + d.id.replace(/^li_/, ''),
+  XHS: () => '',
+}[d.src] || (() => 'https://www.instagram.com/p/' + d.id + '/embed/'))();
 const byRec = {}; DATA.forEach(d => byRec[d.id] = d);
 const TRENDS = __TRENDS__;
 DATA.forEach(d => {
@@ -458,16 +526,18 @@ const comps = [...new Set(DATA.map(d => d.competitor))].sort();
 function fillComps() {
   const keep = $('fComp').value;
   $('fComp').innerHTML = '<option value="">全部 Competitor</option>';
-  [...new Set(DATA.filter(d => !curPlat || d.src === curPlat).map(d => d.src + ':' + d.competitor))].sort((a, b) => a.slice(3).localeCompare(b.slice(3)) || a.localeCompare(b))
+  const seen = {};
+  DATA.filter(d => !curPlat || d.src === curPlat).forEach(d => { seen[d.src + ':' + d.competitor] = d; });
+  Object.keys(seen).sort((a, b) => seen[a].who.localeCompare(seen[b].who) || a.localeCompare(b))
     .forEach(k => { const o = document.createElement('option'); o.value = k;
-      o.textContent = '@' + k.slice(3) + (k.startsWith('FB') ? '  (Facebook)' : '  (Instagram)'); $('fComp').appendChild(o); });
+      o.textContent = seen[k].who + '  (' + platOf(seen[k]).label + ')'; $('fComp').appendChild(o); });
   $('fComp').value = [...$('fComp').options].some(o => o.value === keep) ? keep : '';
 }
 fillComps();
 
 function matchQ(d) {
   const q = ($('fSearch').value || '').trim().toLowerCase();
-  return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor).toLowerCase().includes(q);
+  return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor + ' ' + d.who).toLowerCase().includes(q);
 }
 
 function poolNoPlat() {
@@ -535,11 +605,21 @@ const io = new IntersectionObserver(entries => {
     if (e.isIntersecting) {
       const el = e.target, pid = el.dataset.pid;
       if (!el.querySelector('iframe')) {
-        const f = document.createElement('iframe');
         const d = DATA.find(x => x.id === pid);
-        f.src = d ? embedSrc(d) : 'https://www.instagram.com/p/' + pid + '/embed/';
-        f.loading = 'lazy'; f.allow = 'autoplay; encrypted-media';
-        el.appendChild(f);
+        const src = d ? embedSrc(d) : 'https://www.instagram.com/p/' + pid + '/embed/';
+        if (src) {
+          const f = document.createElement('iframe');
+          f.src = src; f.loading = 'lazy'; f.allow = 'autoplay; encrypted-media';
+          el.appendChild(f);
+        } else if (d) {
+          // no official embed (小红书): cover image + link to the original note
+          const a = document.createElement('a');
+          a.className = 'cover'; a.href = d.url; a.target = '_blank'; a.rel = 'noopener';
+          a.innerHTML = (d.thumb ? '<img referrerpolicy="no-referrer" alt="" src="' + esc(d.thumb) + '">' : '')
+            + '<span class="open">' + (d.video ? '▶ ' : '') + '在' + esc(platOf(d).label) + '打开</span>';
+          const img = a.querySelector('img'); if (img) img.onerror = () => img.remove();
+          el.appendChild(a);
+        }
       }
       io.unobserve(el);
     }
@@ -556,7 +636,7 @@ async function setStatus(d, val) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     d.status = val;
     cacheStatus(d.id, val);
-    toast('✓ @' + d.competitor + ' 已移到「' + val + '」', true);
+    toast('✓ ' + d.who + ' 已移到「' + val + '」', true);
   } catch (e) {
     toast('更新失败: ' + e.message + (String(e.message).includes('401') || String(e.message).includes('403') ? ' — 密钥无效?' : ''), false);
   }
@@ -590,7 +670,7 @@ function card(d, idx) {
     <div class="meta">
       <div class="row1">
         <span class="handle" title="拖到上方 tab 即可归类">${I('grip')}</span>
-        <a class="who" href="${prof(d)}" target="_blank">@${d.competitor}</a>${platBadge(d)}
+        <a class="who" href="${prof(d)}" target="_blank">${esc(d.who)}</a>${platBadge(d)}
         <span class="badge">${d.type || '-'}</span>
         ${days !== null && days <= 7 ? '<span class="badge bnew">' + I('star') + '新帖</span>' : ''}
         ${horse ? '<span class="badge bhorse">' + I('zap') + '黑马</span>' : ''}
@@ -636,7 +716,7 @@ function card(d, idx) {
     navigator.clipboard.writeText(d.my).then(() => toast('✓ 我的改写稿已复制', true));
   el.querySelector('.brief').onclick = () => {
     const NL = String.fromCharCode(10);
-    const parts = ['🎬 爆款参考 @' + d.competitor + ((d.x || 0) >= 2 ? '(自家平均 ×' + d.x + ')' : ''),
+    const parts = ['🎬 爆款参考 ' + d.who + ' (' + platOf(d).label + ')' + ((d.x || 0) >= 2 ? '(自家平均 ×' + d.x + ')' : ''),
       '📊 🔥' + d.score + ' | ER ' + d.er + '% | ❤️ ' + (d.likes > 0 ? fmt(d.likes) : '隐藏') +
       ' | 💬 ' + fmt(d.comments) + ' | 👥 ' + fmt(d.followers) + (ago ? ' | ' + ago : ''),
       '🔗 ' + d.url, '✍️ Hook: ' + hook];
@@ -798,6 +878,7 @@ TEAM_TEMPLATE = """<!DOCTYPE html>
   .row .who2 { color:var(--accent); text-decoration:none; font-weight:600; font-size:12px; white-space:nowrap; }
   .pt { font-size:10px; font-weight:600; color:#fff; padding:1px 6px; border-radius:4px; white-space:nowrap; }
   .pt.ig { background:linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af); } .pt.fb { background:#1877f2; }
+  .pt.tt { background:#000; box-shadow: inset 2px 0 #25f4ee, inset -2px 0 #fe2c55; } .pt.li { background:#0a66c2; } .pt.xhs { background:#ff2442; }
   .xb { font-family:var(--disp); font-weight:600; font-size:11px; color:var(--orange);
     border:1px solid rgba(240,163,63,.4); background:rgba(240,163,63,.07); border-radius:99px;
     padding:2px 8px; white-space:nowrap; }
@@ -999,8 +1080,16 @@ document.getElementById('updated').textContent = '数据更新于 __UPDATED__';
 const $ = id => document.getElementById(id);
 const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const prof = d => d.src === 'FB' ? 'https://www.facebook.com/' + d.competitor : 'https://www.instagram.com/' + d.competitor + '/';
-const ptag = d => d.src === 'FB' ? '<span class="pt fb">FB</span>' : '<span class="pt ig">IG</span>';
+const PLAT = {
+  IG:  { label: 'Instagram', short: 'IG',  cls: 'ig',  prof: h => 'https://www.instagram.com/' + h + '/' },
+  FB:  { label: 'Facebook',  short: 'FB',  cls: 'fb',  prof: h => 'https://www.facebook.com/' + h },
+  TT:  { label: 'TikTok',    short: 'TT',  cls: 'tt',  prof: h => 'https://www.tiktok.com/@' + h },
+  LI:  { label: 'LinkedIn',  short: 'in',  cls: 'li',  prof: h => 'https://www.linkedin.com/company/' + h + '/' },
+  XHS: { label: '小红书',    short: '小红书', cls: 'xhs', prof: h => 'https://www.xiaohongshu.com/user/profile/' + h },
+};
+const platOf = d => PLAT[d.src] || PLAT.IG;
+const prof = d => platOf(d).prof(d.competitor);
+const ptag = d => '<span class="pt ' + platOf(d).cls + '">' + platOf(d).short + '</span>';
 const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
 const getKey = () => ANON;  // anon key is baked in — safe, can only change status
 const firstLine = c => ((c || '').split('\\n').map(l => l.trim()).filter(Boolean)[0] || '(无文案)');
@@ -1086,7 +1175,7 @@ async function setStatus(d, val) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     d.status = val;
     cacheStatus(d.id, val);
-    toast('✓ @' + d.competitor + ' → ' + val, true);
+    toast('✓ ' + d.who + ' → ' + val, true);
   } catch (e) {
     toast('失败: ' + e.message, false);
   }
@@ -1111,7 +1200,7 @@ function renderWork() {
   if (!shoot.length) sl.innerHTML = '<div class="none">队列是空的 — Marketer 去爆款雷达挑几条拖进「拍摄中」</div>';
   shoot.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
-    r.innerHTML = '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>' + ptag(d)
+    r.innerHTML = '<a class="who2" href="' + prof(d) + '" target="_blank">' + esc(d.who) + '</a>' + ptag(d)
       + ((d.x || 0) >= 2 ? '<span class="xb">×' + d.x + '</span>' : '')
       + '<span class="hookline">' + esc(firstLine(d.caption)) + '</span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
@@ -1129,7 +1218,7 @@ function renderWork() {
   picks.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
     r.innerHTML = '<span class="xb">×' + d.x + '</span>'
-      + '<a class="who2" href="' + prof(d) + '" target="_blank">@' + esc(d.competitor) + '</a>' + ptag(d)
+      + '<a class="who2" href="' + prof(d) + '" target="_blank">' + esc(d.who) + '</a>' + ptag(d)
       + '<span class="hookline">' + esc(firstLine(d.caption))
       + '<small>🔥' + d.score + ' · ER ' + d.er + '% · 💬' + fmt(d.comments) + '</small></span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
@@ -1214,6 +1303,11 @@ def main():
     # Supabase hides it here; its rows stay in the table, so ticking it back
     # later brings the whole history with it.
     active = fetch_active_handles(svc)
+    names = fetch_display_names(svc)
+    for p in unique:
+        name = names.get((p["src"], _handle(p["competitor"])))
+        if name:
+            p["who"] = name
     if active is not None:
         kept = [p for p in unique if _handle(p["competitor"]) in active]
         dropped = sorted({p["competitor"] for p in unique
@@ -1229,11 +1323,12 @@ def main():
 
     # outlier multiplier: post score vs the account's own median score
     import statistics
+    # per platform: the same brand's TikTok and Instagram are judged separately
     by_comp = {}
     for p in unique:
-        by_comp.setdefault(p["competitor"], []).append(p["score"] or 0)
+        by_comp.setdefault((p["src"], p["competitor"]), []).append(p["score"] or 0)
     for p in unique:
-        scores = [s for s in by_comp[p["competitor"]] if s > 0]
+        scores = [s for s in by_comp[(p["src"], p["competitor"])] if s > 0]
         med = statistics.median(scores) if len(scores) >= 3 else 0
         p["x"] = round((p["score"] or 0) / med, 1) if med > 0 else 0
 
